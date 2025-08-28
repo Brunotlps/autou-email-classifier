@@ -78,4 +78,4 @@ Este projeto está sob a licença MIT. Veja o arquivo [LICENSE](LICENSE) para ma
 
 ---
 
-**Desenvolvido com ❤️ para o desafio técnico da AutoU**
+**Desenvolvido com entusiasmo para o desafio técnico da AutoU**
