@@ -386,7 +386,7 @@ class AIClassificationService:
             self._local_classifier = pipeline(
                 "sentiment-analysis",
                 model=self.backup_model,
-                return_all_scores=True # top_k = None
+                top_k = None # return_all_scores=True 
             )
         
         result = self._local_classifier(text[:512])
