@@ -60,3 +60,46 @@ class ClassificationSerializer(serializers.ModelSerializer):
             'suggested_response',
             'ai_model_used'
         ]
+
+
+class EmailClassificationSerializer(serializers.Serializer):
+    """
+    Serializer para classificação de emails via API. / Serializer for email classification via API.
+    Usado nos endpoints /classify/ e /classify_async/ Used in the /classify/ and /classify_async/ endpoints.
+    """
+    
+    subject = serializers.CharField(
+        max_length=255,
+        required=False,
+        allow_blank=True,
+        help_text="Assunto do email"
+    )
+    
+    content = serializers.CharField(
+        max_length=10000,
+        required=True,
+        allow_blank=False,
+        help_text="Conteúdo do email para classificação"
+    )
+    
+    def validate_content(self, value):
+        """Validação customizada do conteúdo."""
+        if len(value.strip()) < 10:
+            raise serializers.ValidationError(
+                "Conteúdo deve ter pelo menos 10 caracteres"
+            )
+        return value.strip()
+    
+    def validate(self, data):
+        """Validação geral dos dados."""
+        subject = data.get('subject', '').strip()
+        content = data.get('content', '').strip()
+        
+        # Verificar se há conteúdo suficiente para análise / Check for sufficient content for analysis
+        total_text = f"{subject} {content}".strip()
+        if len(total_text) < 15:
+            raise serializers.ValidationError(
+                "Conteúdo total (assunto + texto) muito curto para análise"
+            )
+        
+        return data

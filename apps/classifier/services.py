@@ -4,6 +4,8 @@
 import time
 from typing import Dict, Any
 from .models import Classification
+import logging
+logger = logging.getLogger(__name__)
 
 
 
@@ -62,83 +64,104 @@ def classify_email_basic(email_content: str) -> Dict[str, Any]:
     }
 
 
-def process_classification_async(classification_id: int) -> bool:
+def process_classification_async(email_data: Dict[str, Any]) -> Dict[str, Any]:
     """
-        Processa a classificação de email de forma assíncrona. / Processes email classification asynchronously.
+    Processamento assíncrono com IA integrada. / Asynchronous processing with integrated AI.
+    
+    Args:
+        email_data (Dict): Dados do email / Email data
+    Returns:
+        Dict: Resultado do processamento / Processing result
+    """
 
-        Args:
-            classification_id (int): ID da classificação a ser processada / ID of the classification to be processed
-        Returns:
-            bool: Indica se o processamento foi bem-sucedido / Indicates if processing was successful
-    """
 
     try:
-        classification = Classification.objects.get(id=classification_id)
-
-        classification.mark_as_processing()
-
-        # Simulação de processamento assíncrono / Simulating asynchronous processing
-        if classification.email:
-            result = classify_email_basic(classification.email.content)
-
-            # Marcar classificação como concluída / Mark classification as completed
-            classification.mark_as_completed(
-                classification_result=result['category'],
-                confidence_score=result['confidence'],
-                suggested_response=result['response'],
-                ai_model_used=result['model_used'],
-                processing_time=result['processing_time']
-            )
-            
-            return True
-        else:
-            classification.mark_as_failed("Email não encontrado para classificação.")
-            return False
-    
-    except Classification.DoesNotExist:
-        # Log de erro / Log error
-        print(f"Classificação com ID {classification_id} não encontrada.")
-        return False
+        subject = email_data.get('subject', '')
+        content = email_data.get('content', '')
+        
+        # Usar IA por padrão, fallback para básico se falhar / Use AI by default, fallback to basic if it fails
+        result = classify_email_ai(subject, content)
+        
+        return {
+            'success': True,
+            'classification': result['category'],
+            'confidence': result['confidence'],
+            'suggested_response': result['suggested_response'],
+            'processing_details': {
+                'method': 'ai_enhanced',
+                'processing_time': result['processing_time'],
+                'model_used': result['model_used'],
+                'ai_details': result['ai_details']
+            }
+        }
+        
     except Exception as e:
-        # Log de erro / Log error
-        print(f"Erro ao processar classificação ID {classification_id}: {str(e)}")
-        classification.mark_as_failed(f"Erro no processamento: {str(e)}")
-        return False
+        logger.error(f"Erro no processamento assíncrono: {str(e)}")
+        # Fallback completo / Full fallback
+        basic_result = classify_email_basic(subject, content)
+        return {
+            'success': False,
+            'classification': basic_result['category'],
+            'confidence': basic_result['confidence'],
+            'suggested_response': basic_result.get('suggested_response', ''),
+            'processing_details': {
+                'method': 'basic_fallback',
+                'error': str(e)
+            }
+        }
 
 
-def classify_email_ai(email_content: str) -> Dict[str, Any]:
+def classify_email_ai(subject: str, content: str) -> Dict[str, Any]:
     """
     Classificação avançada de email usando IA. / Advanced email classification using AI.
     
     Args:
-        email_content (str): Conteúdo do email / Email content
+        subject (str): Assunto do email / Email subject
+        content (str): Conteúdo do email / Email content
     Returns:
         Dict[str, Any]: Resultado da classificação com IA / AI classification result
     """
     from .ai_service import ai_service
+    import time
+    
     
 
-
-    # Obter classificação IA / Get AI classification
-    ai_result = ai_service.classify_email_text(email_content)
+    start_time = time.time()
     
-    # Gerar resposta automática / Generate automatic response
-    response_result = ai_service.generate_response(
-        email_content, 
-        ai_result['classification']
-    )
+    # Combinar subject + content para análise completa / Combine subject + content for full analysis
+    full_text = f"{subject}\n\n{content}" if subject else content
     
-    # Combinar resultados / Combine results
-    return {
-        'category': ai_result['classification'],
-        'confidence': ai_result['confidence'],
-        'response': response_result['suggested_response'],
-        'model_used': f"ai-{ai_result['processing_details']['method']}",
-        'processing_time': 0.1,  # Será calculado real
-        'ai_details': {
-            'method': ai_result['processing_details']['method'],
-            'model_used': ai_result['processing_details'].get('model_used', 'local'),
-            'context': response_result['generation_details']['context_used'],
-            'response_confidence': response_result['confidence']
+    try:
+        # Obter classificação IA / Get AI classification
+        ai_result = ai_service.classify_email_text(full_text)
+        
+        # Gerar resposta automática /  Generate automatic response
+        response_result = ai_service.generate_response(
+            full_text, 
+            ai_result['classification']
+        )
+        
+        processing_time = time.time() - start_time
+        
+        # Combinar resultados no formato esperado pela API / Combine results in expected API format
+        return {
+            'category': ai_result['classification'],
+            'confidence': ai_result['confidence'],
+            'suggested_response': response_result['suggested_response'],
+            'response_confidence': response_result['confidence'],
+            'processing_time': round(processing_time, 3),
+            'model_used': f"ai-{ai_result['processing_details']['method']}",
+            'ai_details': {
+                'classification_method': ai_result['processing_details']['method'],
+                'model_used': ai_result['processing_details'].get('model_used', 'heuristic'),
+                'context_detected': response_result['generation_details']['context_used'],
+                'keywords_found': ai_result['processing_details'].get('productive_keywords', 0),
+                'confidence_boost': ai_result['processing_details'].get('consensus_boost', False),
+                'processed_at': ai_result['processing_details']['processed_at']
+            }
         }
-    }
+        
+    except Exception as e:
+        logger.error(f"Erro na classificação AI: {str(e)}")
+        # Fallback para classificação básica / Fallback to basic classification
+        return classify_email_basic(subject, content)
