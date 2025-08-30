@@ -207,3 +207,38 @@ LOGGING = {
         'level': 'INFO',
     },
 }
+
+# AI/ML Configuration
+AI_SETTINGS = {
+    # Hugging Face API
+    'HUGGINGFACE_API_TOKEN': env('HUGGINGFACE_API_TOKEN', default=''),
+    'HUGGINGFACE_API_URL': env('HUGGINGFACE_API_URL', default='https://api-inference.huggingface.co/models'),
+    
+    # Models
+    'CLASSIFICATION_MODEL': env('CLASSIFICATION_MODEL', default='cardiffnlp/twitter-roberta-base-sentiment-latest'),
+    'RESPONSE_GENERATION_MODEL': env('RESPONSE_GENERATION_MODEL', default='microsoft/DialoGPT-medium'),
+    'TEXT_EMBEDDING_MODEL': env('TEXT_EMBEDDING_MODEL', default='sentence-transformers/all-MiniLM-L6-v2'),
+    'BACKUP_CLASSIFICATION_MODEL': env('BACKUP_CLASSIFICATION_MODEL', default='distilbert-base-uncased-finetuned-sst-2-english'),
+    
+    # Processing Settings
+    'AI_MODE': env('AI_MODE', default='online'),
+    'AI_USE_LOCAL_MODELS': env.bool('AI_USE_LOCAL_MODELS', default=False),
+    'AI_CONFIDENCE_THRESHOLD': env.float('AI_CONFIDENCE_THRESHOLD', default=0.7),
+    'MAX_RESPONSE_LENGTH': env.int('MAX_RESPONSE_LENGTH', default=150),
+    'PROCESSING_TIMEOUT': env.int('PROCESSING_TIMEOUT', default=30),
+    'AI_RETRY_ATTEMPTS': env.int('AI_RETRY_ATTEMPTS', default=3),
+    'AI_FALLBACK_TO_LOCAL': env.bool('AI_FALLBACK_TO_LOCAL', default=True),
+    
+    # Cache and Rate Limiting
+    'AI_CACHE_TTL': env.int('AI_CACHE_TTL', default=3600),
+    'AI_RATE_LIMIT_PER_MINUTE': env.int('AI_RATE_LIMIT_PER_MINUTE', default=60),
+}
+
+# Logging específico para IA
+LOGGING['loggers'] = {
+    'apps.classifier.ai_service': {
+        'handlers': ['console'],
+        'level': 'DEBUG',
+        'propagate': False,
+    },
+}

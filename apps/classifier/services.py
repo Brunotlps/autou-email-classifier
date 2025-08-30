@@ -104,3 +104,41 @@ def process_classification_async(classification_id: int) -> bool:
         print(f"Erro ao processar classificação ID {classification_id}: {str(e)}")
         classification.mark_as_failed(f"Erro no processamento: {str(e)}")
         return False
+
+
+def classify_email_ai(email_content: str) -> Dict[str, Any]:
+    """
+    Classificação avançada de email usando IA. / Advanced email classification using AI.
+    
+    Args:
+        email_content (str): Conteúdo do email / Email content
+    Returns:
+        Dict[str, Any]: Resultado da classificação com IA / AI classification result
+    """
+    from .ai_service import ai_service
+    
+
+
+    # Obter classificação IA / Get AI classification
+    ai_result = ai_service.classify_email_text(email_content)
+    
+    # Gerar resposta automática / Generate automatic response
+    response_result = ai_service.generate_response(
+        email_content, 
+        ai_result['classification']
+    )
+    
+    # Combinar resultados / Combine results
+    return {
+        'category': ai_result['classification'],
+        'confidence': ai_result['confidence'],
+        'response': response_result['suggested_response'],
+        'model_used': f"ai-{ai_result['processing_details']['method']}",
+        'processing_time': 0.1,  # Será calculado real
+        'ai_details': {
+            'method': ai_result['processing_details']['method'],
+            'model_used': ai_result['processing_details'].get('model_used', 'local'),
+            'context': response_result['generation_details']['context_used'],
+            'response_confidence': response_result['confidence']
+        }
+    }
