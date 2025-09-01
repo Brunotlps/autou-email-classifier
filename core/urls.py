@@ -16,7 +16,7 @@ urlpatterns = [
     path("admin/", admin.site.urls),
 
     # Redirect root to API
-    path('', RedirectView.as_view(url='/api/', permanent=False)),
+    path('', include('apps.frontend.urls')),
 
     # API Root (navegação principal)
     path('api/', include(router.urls)),

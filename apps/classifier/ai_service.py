@@ -40,6 +40,9 @@ class AIClassificationService:
 
         # Configurações da API / API settings
         self.api_token = settings.AI_SETTINGS['HUGGINGFACE_API_TOKEN']
+        print(f"🔍 TOKEN DEBUG: '{self.api_token}' (length: {len(self.api_token) if self.api_token else 0})")
+        if not self.api_token:
+            print("⚠️ Token vazio! Verifique arquivo .env")
         self.api_url = settings.AI_SETTINGS['HUGGINGFACE_API_URL']
         self.timeout = settings.AI_SETTINGS['PROCESSING_TIMEOUT']
         self.retry_attempts = settings.AI_SETTINGS['AI_RETRY_ATTEMPTS']
@@ -187,6 +190,10 @@ class AIClassificationService:
 
     def _validate_configuration(self):
         
+        
+        print(f"🔍 DEBUG - Token carregado: '{self.api_token}'")
+        print(f"🔍 DEBUG - Token length: {len(self.api_token) if self.api_token else 0}")
+        print(f"🔍 DEBUG - Headers: {self.headers}")
 
         if not self.api_token:
             logger.warning("HUGGINGFACE_API_TOKEN não configurado. Usando fallback local ou heurísticas.")
@@ -648,5 +655,26 @@ class AIClassificationService:
             'fallback_rate': self.stats['fallback_uses'] / max(1, self.stats['api_calls'] + self.stats['fallback_uses'])
         }
 
-# Instancia singleton do serviço / Singleton instance of the service
-ai_service = AIClassificationService()
+    # Instancia singleton do serviço / Singleton instance of the service
+_ai_service_instance = None
+def get_ai_service():
+    """
+        Retorna instância singleton do AI service. / Returns singleton instance of the AI service.
+        Inicializa apenas quando necessário (lazy loading). / Initializes only when needed (lazy loading).
+    """
+
+
+    global _ai_service_instance
+    if _ai_service_instance is None:
+        _ai_service_instance = AIClassificationService()
+    return _ai_service_instance
+
+# Para compatibilidade com imports existentes / For compatibility with existing imports
+class AIServiceProxy:
+    """Proxy que inicializa o service apenas quando usado. / Proxy that initializes the service only when used."""
+    
+
+    def __getattr__(self, name):
+        return getattr(get_ai_service(), name)
+
+ai_service = AIServiceProxy()

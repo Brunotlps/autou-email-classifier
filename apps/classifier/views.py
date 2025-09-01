@@ -2,15 +2,23 @@ from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.permissions import AllowAny
+from rest_framework.decorators import api_view
+from rest_framework.response import Response
 
 from django.db.models import Q 
 from django.utils import timezone
+from django.http import JsonResponse
+from django.utils import timezone
+from django.db.models import Count, Q
 
 from .models import Classification
 from .serializers import ClassificationSerializer, EmailClassificationSerializer
 from .services import process_classification_async
 from .services import classify_email_ai, process_classification_async
 
+from datetime import datetime, timedelta
+
+import json
 import logging 
 logger = logging.getLogger(__name__)
 
@@ -319,7 +327,8 @@ class ClassificationViewSet(viewsets.ModelViewSet):
 
     @action(detail=False, methods=['post'], permission_classes=[AllowAny])
     def classify_no_db(self, request):
-        """Classificação sem salvar no banco de dados."""
+        """Classificação sem salvar no banco de dados. / Classification without saving to database."""
+
 
         serializer = EmailClassificationSerializer(data=request.data)
 
@@ -328,12 +337,12 @@ class ClassificationViewSet(viewsets.ModelViewSet):
             content = serializer.validated_data.get('content', '')
 
             try:
-                # Usar IA apenas
+                # Usar IA apenas / Use AI only
                 result = classify_email_ai(subject, content)
 
-                # Retornar resultado SEM salvar no banco
+                # Retornar resultado SEM salvar no banco / Return result WITHOUT saving to database
                 response_data = {
-                    'id': None,  # Sem ID pois não foi salvo
+                    'id': None,  # Sem ID pois não foi salvo / No ID since not saved
                     'category': result['category'],
                     'confidence': result['confidence'],
                     'suggested_response': result['suggested_response'],
@@ -352,3 +361,269 @@ class ClassificationViewSet(viewsets.ModelViewSet):
                 }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+# === DASHBOARD VIEWS SEPARADAS / SEPARATE DASHBOARD VIEWS ===
+@api_view(['GET'])
+def dashboard_data_api(request):
+    """
+    API endpoint específico para dados do dashboard.
+    Dedicated API endpoint for dashboard data.
+    """
+
+
+    try:
+        data = {
+            'stats': _get_dashboard_stats(),
+            'timeline_labels': _get_timeline_data()['labels'],
+            'timeline_data': _get_timeline_data()['data'],
+            'confidence_distribution': _get_confidence_distribution(),
+            'recent_emails': _serialize_recent_classifications(_get_recent_classifications()),
+            'ai_stats': _get_ai_service_stats(),
+            'system_status': _get_system_status(),
+            'last_updated': timezone.now().isoformat(),
+        }
+        
+        return Response(data)
+        
+    except Exception as e:
+        logger.error(f"Erro no endpoint de dados do dashboard: {e}")
+        return Response({
+            'error': 'Erro interno do servidor',
+            'message': str(e)
+        }, status=500)
+
+
+@api_view(['GET'])
+def dashboard_stats_api(request):
+    """
+    Endpoint específico só para estatísticas básicas.
+    Dedicated endpoint for basic statistics only.
+    """
+    try:
+        return Response(_get_dashboard_stats())
+    except Exception as e:
+        return Response({'error': str(e)}, status=500)
+
+
+# === FUNÇÕES AUXILIARES / HELPER FUNCTIONS ===
+def _get_dashboard_stats():
+    """Calcular estatísticas básicas das classificações. / Calculate basic statistics of classifications."""
+    
+    
+    try:
+        # Apenas classificações completas / Only completed classifications
+        completed_classifications = Classification.objects.filter(processing_status='completed')
+        
+        total_classifications = completed_classifications.count()
+        
+        # Contar por categoria / Count by category
+        stats = completed_classifications.aggregate(
+            productive=Count('id', filter=Q(classification_result='productive')),
+            unproductive=Count('id', filter=Q(classification_result='unproductive'))
+        )
+        
+        return {
+            'total_emails': total_classifications,
+            'productive_emails': stats['productive'] or 0,
+            'unproductive_emails': stats['unproductive'] or 0,
+            'neutral_emails': 0,  # Placeholder para futuras categorias / Placeholder for future categories
+        }
+        
+    except Exception as e:
+        logger.error(f"Erro ao calcular estatísticas: {e}")
+        return {
+            'total_emails': 0,
+            'productive_emails': 0,
+            'unproductive_emails': 0,
+            'neutral_emails': 0,
+        }
+
+
+def _get_timeline_data(days=7):
+    """Obter dados de timeline dos últimos N dias. / Get timeline data for the last N days."""
+    
+    
+    try:
+        end_date = timezone.now().date()
+        start_date = end_date - timedelta(days=days-1)
+        
+        # Criar lista de datas / Create list of dates
+        date_list = []
+        current_date = start_date
+        while current_date <= end_date:
+            date_list.append(current_date)
+            current_date += timedelta(days=1)
+        
+        # Buscar contagens por data de classificação / Fetch counts by classification date
+        date_counts = {}
+        queryset = Classification.objects.filter(
+            processing_status='completed',
+            classified_at__date__gte=start_date,
+            classified_at__date__lte=end_date
+        ).extra(
+            select={'date': 'DATE(classified_at)'}
+        ).values('date').annotate(
+            count=Count('id')
+        )
+        
+        for item in queryset:
+            date_counts[item['date']] = item['count']
+        
+        # Preparar dados para Chart.js / Prepare data for Chart.js
+        labels = []
+        data = []
+        
+        for date in date_list:
+            labels.append(date.strftime('%d/%m'))
+            data.append(date_counts.get(date, 0))
+        
+        return {
+            'labels': labels,
+            'data': data
+        }
+        
+    except Exception as e:
+        logger.error(f"Erro ao obter dados de timeline: {e}")
+        return {
+            'labels': [],
+            'data': []
+        }
+
+
+def _get_confidence_distribution():
+    """Calcular distribuição de confiança. / Calculate confidence distribution."""
+    
+    
+    try:
+        intervals = [
+            (0.0, 0.2),    # 0-20%
+            (0.21, 0.4),   # 21-40%
+            (0.41, 0.6),   # 41-60%
+            (0.61, 0.8),   # 61-80%
+            (0.81, 1.0),   # 81-100%
+        ]
+        
+        distribution = []
+        
+        base_queryset = Classification.objects.filter(
+            processing_status='completed',
+            confidence_score__isnull=False
+        )
+        
+        for min_conf, max_conf in intervals:
+            count = base_queryset.filter(
+                confidence_score__gte=min_conf,
+                confidence_score__lte=max_conf
+            ).count()
+            distribution.append(count)
+        
+        return distribution
+        
+    except Exception as e:
+        logger.error(f"Erro ao calcular distribuição de confiança: {e}")
+        return [0, 0, 0, 0, 0]
+
+
+def _get_recent_classifications(limit=10):
+    """Obter classificações recentes. / Get recent classifications."""
+    
+    
+    try:
+        return Classification.objects.filter(
+            processing_status='completed'
+        ).select_related('email').order_by('-classified_at')[:limit]
+        
+    except Exception as e:
+        logger.error(f"Erro ao obter classificações recentes: {e}")
+        return []
+
+
+def _serialize_recent_classifications(classifications):
+    """Serializar classificações para JSON. / Serialize classifications to JSON."""
+    
+    
+    try:
+        return [
+            {
+                'id': classification.id,
+                'subject': classification.email.subject if classification.email else 'Sem assunto',
+                'category': classification.classification_result or 'unknown',
+                'confidence': float(classification.confidence_score) if classification.confidence_score else 0,
+                'created_at': classification.classified_at.strftime('%d/%m/%Y %H:%M') if classification.classified_at else '',
+                'get_category_display': classification.get_classification_result_display() if classification.classification_result else 'N/A'
+            }
+            for classification in classifications
+        ]
+    except Exception as e:
+        logger.error(f"Erro ao serializar classificações: {e}")
+        return []
+
+
+
+def _get_ai_service_stats():
+    """Obter estatísticas do serviço de IA. / Get AI service statistics."""
+    
+    
+    try:
+        try:
+            from .ai_service import get_ai_service
+            
+            ai_service = get_ai_service()
+            if hasattr(ai_service, 'get_stats'):
+                stats = ai_service.get_stats()
+                
+                return {
+                    'cache_hit_rate': stats.get('cache_hit_rate', 0) * 100,
+                    'error_rate': stats.get('error_rate', 0) * 100,
+                    'fallback_rate': stats.get('fallback_rate', 0) * 100,
+                    'api_calls': stats.get('api_calls', 0),
+                    'cache_hits': stats.get('cache_hits', 0),
+                    'errors': stats.get('errors', 0),
+                    'fallback_uses': stats.get('fallback_uses', 0),
+                }
+        except ImportError:
+            pass
+        
+        return None
+        
+    except Exception as e:
+        logger.error(f"Erro ao obter estatísticas do AI service: {e}")
+        return None
+
+
+def _get_system_status():
+    """Status do sistema baseado nas classificações. / System status based on classifications."""
+    
+    
+    try:
+        has_classifications = Classification.objects.filter(processing_status='completed').exists()
+        
+        if not has_classifications:
+            return 'warning'
+        
+        # Taxa de erro nas últimas 24h / Error rate in the last 24 hours
+        last_24h = timezone.now() - timedelta(hours=24)
+        
+        recent_stats = Classification.objects.filter(
+            created_at__gte=last_24h
+        ).aggregate(
+            total=Count('id'),
+            failed=Count('id', filter=Q(processing_status='failed')),
+            completed=Count('id', filter=Q(processing_status='completed'))
+        )
+        
+        if recent_stats['total'] > 0:
+            error_rate = recent_stats['failed'] / recent_stats['total']
+            
+            if error_rate > 0.5:
+                return 'error'
+            
+            if error_rate > 0.2:
+                return 'warning'
+        
+        return 'success'
+        
+    except Exception as e:
+        logger.error(f"Erro ao verificar status do sistema: {e}")
+        return 'error'

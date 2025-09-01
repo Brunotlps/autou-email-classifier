@@ -1,0 +1,113 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/upload.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <!-- Header Section -->
+            <div class="text-center mb-5">
+                <h2 class="fw-bold text-primary mb-3">
+                    <i class="fas fa-brain me-2"></i>Classificação Inteligente
+                </h2>
+                <p class="lead text-muted">
+                    Cole o texto do email ou envie arquivo para análise por IA
+                </p>
+            </div>
+
+            <!-- Upload Form -->
+            <div class="card shadow-lg border-0">
+                <div class="card-body p-4">
+                    <form id="classificationForm" class="needs-validation" novalidate>
+                        {% csrf_token %}
+                        
+                        <!-- Email Subject -->
+                        <div class="mb-4">
+                            <label for="emailSubject" class="form-label fw-semibold">
+                                <i class="fas fa-envelope me-2 text-primary"></i>Assunto do Email
+                            </label>
+                            <input type="text" 
+                                   class="form-control form-control-lg" 
+                                   id="emailSubject" 
+                                   name="subject"
+                                   placeholder="Ex: Agendamento de reunião"
+                                   required>
+                            <div class="invalid-feedback">
+                                Por favor, insira o assunto do email.
+                            </div>
+                        </div>
+
+                        <!-- Email Content -->
+                        <div class="mb-4">
+                            <label for="emailContent" class="form-label fw-semibold">
+                                <i class="fas fa-file-text me-2 text-primary"></i>Conteúdo do Email
+                            </label>
+                            <textarea class="form-control" 
+                                      id="emailContent" 
+                                      name="content"
+                                      rows="8" 
+                                      placeholder="Cole aqui o conteúdo completo do email..."
+                                      required></textarea>
+                            <div class="invalid-feedback">
+                                Por favor, insira o conteúdo do email.
+                            </div>
+                        </div>
+
+                        <!-- File Upload Alternative -->
+                        <div class="mb-4">
+                            <label class="form-label fw-semibold">
+                                <i class="fas fa-upload me-2 text-primary"></i>Ou envie um arquivo
+                            </label>
+                            <div class="upload-zone border-2 border-dashed rounded p-4 text-center" 
+                                 id="uploadZone">
+                                <i class="fas fa-cloud-upload-alt fa-3x text-muted mb-3"></i>
+                                <p class="mb-2 text-muted">
+                                    Arraste arquivos aqui ou <span class="text-primary">clique para selecionar</span>
+                                </p>
+                                <small class="text-muted">Suporte: .txt, .pdf (máx. 5MB)</small>
+                                <input type="file" 
+                                       class="d-none" 
+                                       id="fileInput" 
+                                       accept="*"
+                                       multiple>
+                            </div>
+                        </div>
+
+                        <!-- Submit Button -->
+                        <div class="d-grid">
+                            <button type="submit" 
+                                    class="btn btn-primary btn-lg" 
+                                    id="classifyBtn">
+                                <i class="fas fa-magic me-2"></i>
+                                <span class="btn-text">Enviar</span>
+                                <span class="spinner-border spinner-border-sm ms-2 d-none" 
+                                      id="loadingSpinner"></span>
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Results Section -->
+            <div class="card mt-4 d-none" id="resultsCard">
+                <div class="card-header bg-success text-white">
+                    <h5 class="mb-0">
+                        <i class="fas fa-check-circle me-2"></i>Resultado da Classificação
+                    </h5>
+                </div>
+                <div class="card-body" id="resultsContent">
+                    <!-- Results will be populated by JavaScript -->
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'js/upload.js' %}"></script>
+{% endblock %}

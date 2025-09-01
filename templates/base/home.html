@@ -1,0 +1,72 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+<div class="container">
+    <div class="row justify-content-center">
+        <div class="col-lg-10">
+            <!-- Hero Section -->
+            <div class="text-center mb-5 fade-in">
+                <h1 class="display-4 fw-bold text-primary mb-4">
+                    <i class="fas fa-robot me-3"></i>AutoU AI
+                </h1>
+                <p class="lead mb-4">{{ description }}</p>
+                <div class="d-flex gap-3 justify-content-center flex-wrap">
+                    <a href="{% url 'frontend:upload' %}" class="btn btn-primary btn-lg">
+                        <i class="fas fa-upload me-2"></i>Classificar Email
+                    </a>
+                    <a href="{% url 'frontend:dashboard' %}" class="btn btn-outline-primary btn-lg">
+                        <i class="fas fa-chart-line me-2"></i>Ver Dashboard
+                    </a>
+                </div>
+            </div>
+            
+            <!-- Stats Cards -->
+            <div class="row g-4 mb-5">
+                <div class="col-md-4">
+                    <div class="card text-center h-100">
+                        <div class="card-body">
+                            <i class="fas fa-brain text-primary fs-1 mb-3"></i>
+                            <h5>95% Precisão</h5>
+                            <p class="text-muted">IA com algoritmos avançados</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="card text-center h-100">
+                        <div class="card-body">
+                            <i class="fas fa-clock text-success fs-1 mb-3"></i>
+                            <h5>Sub-segundo</h5>
+                            <p class="text-muted">Processamento em tempo real</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="card text-center h-100">
+                        <div class="card-body">
+                            <i class="fas fa-shield-alt text-warning fs-1 mb-3"></i>
+                            <h5>100% Seguro</h5>
+                            <p class="text-muted">Dados protegidos e privados</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Features List -->
+            <div class="row">
+                <div class="col-lg-6 mx-auto">
+                    <h3 class="text-center mb-4">Funcionalidades</h3>
+                    <div class="list-group list-group-flush">
+                        {% for feature in features %}
+                        <div class="list-group-item border-0 px-0">
+                            <i class="fas fa-check-circle text-success me-3"></i>
+                            {{ feature }}
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

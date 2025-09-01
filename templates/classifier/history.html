@@ -1,0 +1,242 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Histórico - AutoU Email Classifier{% endblock %}
+
+{% block extra_css %}
+<link href="{% static 'css/dashboard.css' %}" rel="stylesheet">
+{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="h2 mb-1">📈 Histórico de Classificações</h1>
+            <p class="text-muted">Acompanhe o desempenho ao longo do tempo</p>
+        </div>
+        <div>
+            <a href="{% url 'frontend:dashboard_test' %}" class="btn btn-outline-primary me-2">
+                <i class="fas fa-chart-bar me-2"></i>Dashboard
+            </a>
+            <a href="{% url 'frontend:upload' %}" class="btn btn-primary">
+                <i class="fas fa-plus me-2"></i>Nova Classificação
+            </a>
+        </div>
+    </div>
+
+    <!-- Stats Summary -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card text-center">
+                <div class="card-body">
+                    <h3 class="text-primary" id="totalCount">-</h3>
+                    <small class="text-muted">Total de Classificações</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-center">
+                <div class="card-body">
+                    <h3 class="text-success" id="productiveCount">-</h3>
+                    <small class="text-muted">Emails Produtivos</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-center">
+                <div class="card-body">
+                    <h3 class="text-danger" id="unproductiveCount">-</h3>
+                    <small class="text-muted">Emails Não Produtivos</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-center">
+                <div class="card-body">
+                    <h3 class="text-info" id="avgConfidence">-</h3>
+                    <small class="text-muted">Confiança Média</small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Timeline Chart -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <h5 class="mb-0">📊 Classificações por Dia</h5>
+        </div>
+        <div class="card-body">
+            <canvas id="timelineChart" style="height: 300px;"></canvas>
+        </div>
+    </div>
+
+    <!-- Recent Classifications Table -->
+    <div class="card">
+        <div class="card-header">
+            <h5 class="mb-0">📋 Classificações Recentes</h5>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>Data</th>
+                            <th>Assunto</th>
+                            <th>Classificação</th>
+                            <th>Confiança</th>
+                            <th>Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody id="historyTableBody">
+                        <tr>
+                            <td colspan="5" class="text-center">
+                                <div class="spinner-border text-primary" role="status">
+                                    <span class="visually-hidden">Carregando...</span>
+                                </div>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script>
+const API_ENDPOINT = '{{ api_endpoint }}';
+
+document.addEventListener('DOMContentLoaded', function() {
+    loadHistoryData();
+    loadHistoryTable();
+});
+
+function loadHistoryData() {
+    fetch(`${API_ENDPOINT}stats/`)
+        .then(response => response.json())
+        .then(data => {
+            document.getElementById('totalCount').textContent = data.total || 0;
+            document.getElementById('productiveCount').textContent = data.productive || 0;
+            document.getElementById('unproductiveCount').textContent = data.unproductive || 0;
+            document.getElementById('avgConfidence').textContent = 
+                data.avg_confidence ? `${Math.round(data.avg_confidence * 100)}%` : '0%';
+            
+            createTimelineChart(data.timeline || []);
+        })
+        .catch(error => {
+            console.error('Erro ao carregar estatísticas:', error);
+        });
+}
+
+function loadHistoryTable() {
+    fetch(`${API_ENDPOINT}?page_size=20&ordering=-classified_at`)
+        .then(response => response.json())
+        .then(data => {
+            displayHistoryTable(data.results || []);
+        })
+        .catch(error => {
+            console.error('Erro ao carregar histórico:', error);
+            document.getElementById('historyTableBody').innerHTML = `
+                <tr>
+                    <td colspan="5" class="text-center text-danger">
+                        Erro ao carregar dados. Tente novamente.
+                    </td>
+                </tr>
+            `;
+        });
+}
+
+function displayHistoryTable(results) {
+    const tbody = document.getElementById('historyTableBody');
+    
+    if (results.length === 0) {
+        tbody.innerHTML = `
+            <tr>
+                <td colspan="5" class="text-center text-muted">
+                    Nenhuma classificação encontrada
+                </td>
+            </tr>
+        `;
+        return;
+    }
+    
+    tbody.innerHTML = results.map(result => `
+        <tr>
+            <td>
+                <small>${new Date(result.classified_at).toLocaleString('pt-BR')}</small>
+            </td>
+            <td>
+                <strong>${result.email?.subject || 'Sem assunto'}</strong>
+                <br>
+                <small class="text-muted">
+                    ${(result.email?.content || '').substring(0, 80)}...
+                </small>
+            </td>
+            <td>
+                <span class="badge ${result.classification_result === 'productive' ? 'bg-success' : 'bg-danger'}">
+                    ${result.classification_result === 'productive' ? 'Produtivo' : 'Não Produtivo'}
+                </span>
+            </td>
+            <td>
+                <div class="progress" style="height: 20px;">
+                    <div class="progress-bar ${getConfidenceColor(result.confidence_score)}" 
+                         style="width: ${(result.confidence_score || 0) * 100}%">
+                        ${Math.round((result.confidence_score || 0) * 100)}%
+                    </div>
+                </div>
+            </td>
+            <td>
+                <button class="btn btn-sm btn-outline-primary" onclick="viewDetails(${result.id})">
+                    <i class="fas fa-eye"></i>
+                </button>
+            </td>
+        </tr>
+    `).join('');
+}
+
+function createTimelineChart(timelineData) {
+    const ctx = document.getElementById('timelineChart');
+    if (!ctx) return;
+    
+    new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: timelineData.map(item => item.date),
+            datasets: [{
+                label: 'Classificações',
+                data: timelineData.map(item => item.count),
+                borderColor: '#667eea',
+                backgroundColor: '#667eea20',
+                borderWidth: 2,
+                fill: true,
+                tension: 0.4
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { display: false }
+            },
+            scales: {
+                y: { beginAtZero: true, ticks: { stepSize: 1 } }
+            }
+        }
+    });
+}
+
+function getConfidenceColor(confidence) {
+    if (confidence >= 0.8) return 'bg-success';
+    if (confidence >= 0.6) return 'bg-warning';
+    return 'bg-danger';
+}
+
+function viewDetails(id) {
+    // Redirect to results page with specific classification
+    window.location.href = `{% url 'frontend:results' %}?id=${id}`;
+}
+</script>
+{% endblock %}

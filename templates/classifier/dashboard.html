@@ -1,0 +1,234 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Dashboard - AutoU Email Classifier{% endblock %}
+
+{% block extra_css %}
+<link href="{% static 'css/dashboard.css' %}" rel="stylesheet">
+{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="h2 mb-1">📊 Dashboard</h1>
+            <p class="text-muted">Visão geral das classificações de email</p>
+        </div>
+        <div class="system-status">
+            <div class="status-indicator success"></div>
+            <span class="small">Sistema Online</span>
+        </div>
+    </div>
+
+    <!-- Stats Cards -->
+    <div class="dashboard-grid">
+        <div class="stats-card">
+            <div class="stats-number">{{ stats.total_emails|default:0 }}</div>
+            <div class="stats-label">Total de Emails</div>
+        </div>
+        
+        <div class="stats-card productive">
+            <div class="stats-number">{{ stats.productive_emails|default:0 }}</div>
+            <div class="stats-label">Emails Produtivos</div>
+        </div>
+        
+        <div class="stats-card unproductive">
+            <div class="stats-number">{{ stats.unproductive_emails|default:0 }}</div>
+            <div class="stats-label">Emails Não Produtivos</div>
+        </div>
+        
+        <div class="stats-card neutral">
+            <div class="stats-number">{{ stats.neutral_emails|default:0 }}</div>
+            <div class="stats-label">Emails Neutros</div>
+        </div>
+    </div>
+
+    <!-- Charts Row -->
+    <div class="row">
+        <div class="col-md-6">
+            <div class="chart-container">
+                <div class="chart-title">📈 Classificações por Categoria</div>
+                <!-- ✅ IMPORTANTE: Altura fixa para evitar re-layouts -->
+                <canvas id="categoryChart" width="400" height="300" style="max-height: 300px;"></canvas>
+            </div>
+        </div>
+        
+        <div class="col-md-6">
+            <div class="chart-container">
+                <div class="chart-title">⏰ Atividade nos Últimos 7 Dias</div>
+                <!-- ✅ IMPORTANTE: Altura fixa para evitar re-layouts -->
+                <canvas id="timelineChart" width="400" height="300" style="max-height: 300px;"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <!-- Confidence Distribution -->
+    <div class="chart-container">
+        <div class="chart-title">🎯 Distribuição de Confiança das Classificações</div>
+        <!-- ✅ IMPORTANTE: Altura fixa para evitar re-layouts -->
+        <canvas id="confidenceChart" width="800" height="200" style="max-height: 200px;"></canvas>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<!-- ✅ CHART.JS ISOLADO DE BOOTSTRAP -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+
+<script>
+// ✅ PREVENIR CONFLITOS COM BOOTSTRAP
+(function() {
+    'use strict';
+    
+    // ✅ CONFIGURAR DADOS EM ESCOPO ISOLADO
+    window.dashboardData = {
+        stats: {
+            total_emails: {{ stats.total_emails|default:0 }},
+            productive_emails: {{ stats.productive_emails|default:0 }},
+            unproductive_emails: {{ stats.unproductive_emails|default:0 }},
+            neutral_emails: {{ stats.neutral_emails|default:0 }}
+        },
+        timeline_labels: {{ timeline_labels|safe }},
+        timeline_data: {{ timeline_data|safe }},
+        confidence_distribution: {{ confidence_distribution|safe }}
+    };
+
+    console.log('📊 Dados configurados:', window.dashboardData);
+    
+    // ✅ AGUARDAR TODOS OS SCRIPTS CARREGAREM
+    function initializeDashboardSafe() {
+        console.log('🎯 Inicializando dashboard (versão segura)...');
+        
+        // Verificar dependências
+        if (typeof Chart === 'undefined') {
+            console.error('❌ Chart.js não carregado!');
+            return;
+        }
+        
+        // ✅ AGUARDAR UM POUCO PARA EVITAR CONFLITOS COM BOOTSTRAP
+        setTimeout(() => {
+            try {
+                initializeCharts();
+            } catch (error) {
+                console.error('❌ Erro ao inicializar gráficos:', error);
+            }
+        }, 250); // ✅ Pequeno delay para evitar conflitos
+    }
+    
+    // ✅ FUNÇÃO DE INICIALIZAÇÃO DOS GRÁFICOS
+    function initializeCharts() {
+        console.log('📊 Criando gráficos seguros...');
+        
+        // Converter dados se necessário
+        if (typeof window.dashboardData.timeline_labels === 'string') {
+            window.dashboardData.timeline_labels = JSON.parse(window.dashboardData.timeline_labels);
+        }
+        if (typeof window.dashboardData.timeline_data === 'string') {
+            window.dashboardData.timeline_data = JSON.parse(window.dashboardData.timeline_data);
+        }
+        if (typeof window.dashboardData.confidence_distribution === 'string') {
+            window.dashboardData.confidence_distribution = JSON.parse(window.dashboardData.confidence_distribution);
+        }
+        
+        // Criar gráficos
+        createCategoryChart();
+        createTimelineChart();
+        createConfidenceChart();
+        
+        console.log('✅ Todos os gráficos criados com sucesso!');
+    }
+    
+    function createCategoryChart() {
+        const ctx = document.getElementById('categoryChart');
+        if (!ctx) return;
+        
+        const stats = window.dashboardData.stats;
+        
+        new Chart(ctx, {
+            type: 'doughnut',
+            data: {
+                labels: ['Produtivo', 'Não Produtivo'],
+                datasets: [{
+                    data: [stats.productive_emails, stats.unproductive_emails],
+                    backgroundColor: ['#10b981', '#ef4444'],
+                    borderWidth: 2,
+                    borderColor: '#fff'
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { position: 'bottom' }
+                }
+            }
+        });
+    }
+    
+    function createTimelineChart() {
+        const ctx = document.getElementById('timelineChart');
+        if (!ctx) return;
+        
+        new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: window.dashboardData.timeline_labels,
+                datasets: [{
+                    label: 'Classificações',
+                    data: window.dashboardData.timeline_data,
+                    borderColor: '#667eea',
+                    backgroundColor: '#667eea20',
+                    borderWidth: 2,
+                    fill: true,
+                    tension: 0.4
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { display: false } },
+                scales: {
+                    y: { beginAtZero: true, ticks: { stepSize: 1 } }
+                }
+            }
+        });
+    }
+    
+    function createConfidenceChart() {
+        const ctx = document.getElementById('confidenceChart');
+        if (!ctx) return;
+        
+        new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: ['0-20%', '21-40%', '41-60%', '61-80%', '81-100%'],
+                datasets: [{
+                    label: 'Classificações',
+                    data: window.dashboardData.confidence_distribution,
+                    backgroundColor: ['#ef4444', '#f59e0b', '#eab308', '#22c55e', '#10b981'],
+                    borderWidth: 1,
+                    borderColor: '#fff'
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { display: false } },
+                scales: {
+                    y: { beginAtZero: true, ticks: { stepSize: 1 } }
+                }
+            }
+        });
+    }
+    
+    // ✅ AGUARDAR DOM ESTAR COMPLETAMENTE PRONTO
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', initializeDashboardSafe);
+    } else {
+        initializeDashboardSafe();
+    }
+    
+})(); // ✅ IIFE para isolar escopo
+</script>
+{% endblock %}

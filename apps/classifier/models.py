@@ -30,7 +30,9 @@ class Classification(models.Model):
         on_delete=models.CASCADE,
         related_name='classification',
         verbose_name='Email',
-        help_text='Email associado a esta classificação.'
+        help_text='Email associado a esta classificação.',
+        blank=True,
+        null=True,
     )
 
 
@@ -139,7 +141,11 @@ class Classification(models.Model):
         """
 
 
-        email_preview = self.email.content_preview if self.email else "Email inexistente"
+        if self.email:
+            email_preview = self.email.content_preview
+        else:
+            email_preview = f"Classificação #{self.id}"
+            
         classification_display = self.get_classification_result_display() if self.classification_result else "Não classificado"
         return f"Classificação {self.id} - {classification_display} - {email_preview}"
 
@@ -235,3 +241,16 @@ class Classification(models.Model):
         self.processing_status = 'failed'
         self.error_message = error_message
         self.save(update_fields=['processing_status', 'error_message'])
+
+
+    def get_classification_result_display(self):
+        """Retorna display name da classificação. / Returns display name of the classification."""
+        
+        
+        display_map = {
+            'productive': 'Produtivo',
+            'unproductive': 'Não Produtivo'
+        }
+        return display_map.get(self.classification_result, 'Desconhecido')
+    
+   

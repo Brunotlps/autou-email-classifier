@@ -20,7 +20,7 @@ from django.urls import path, include
 
 from rest_framework.routers import DefaultRouter
 
-from .views import ClassificationViewSet
+from .views import ClassificationViewSet, dashboard_data_api, dashboard_stats_api
 
 
 # Router para ViewSets / Routers for ViewSets
@@ -28,9 +28,15 @@ router = DefaultRouter()
 router.register(r'classifications', ClassificationViewSet, basename='classification')
 
 
+app_name = 'classifier'
+
 urlpatterns = [
-    # Inclui todas as rotas do router / Includes all routes from the router
+    # Rotas do ViewSet (CRUD) / ViewSet routes (CRUD)
     path('', include(router.urls)),
+
+    # Endpoints da API Dashboard / Dashboard API endpoints
+    path('dashboard-data/', dashboard_data_api, name='dashboard_data'),
+    path('dashboard-stats/', dashboard_stats_api, name='dashboard_stats'),
 ]
 
 

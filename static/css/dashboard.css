@@ -1,0 +1,281 @@
+/* ✅ DASHBOARD GRID - SEM PROBLEMAS */
+.dashboard-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 1.5rem;
+    margin-bottom: 2rem;
+}
+
+/* ✅ STATS CARDS - REMOVENDO TRANSITIONS PROBLEMÁTICAS */
+.stats-card {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border-radius: 12px;
+    padding: 1.5rem;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    /* ❌ REMOVIDO: transition: transform 0.3s ease; */
+}
+
+/* ✅ HOVER SEM TRANSFORM (EVITA RE-LAYOUT) */
+.stats-card:hover {
+    /* ❌ REMOVIDO: transform: translateY(-5px); */
+    box-shadow: 0 6px 8px rgba(0, 0, 0, 0.15);
+}
+
+.stats-card.productive {
+    background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+}
+
+.stats-card.unproductive {
+    background: linear-gradient(135deg, #fc466b 0%, #3f5efb 100%);
+}
+
+.stats-card.neutral {
+    background: linear-gradient(135deg, #ffecd2 0%, #fcb69f 100%);
+    color: #333;
+}
+
+.stats-number {
+    font-size: 2.5rem;
+    font-weight: bold;
+    margin-bottom: 0.5rem;
+}
+
+.stats-label {
+    font-size: 0.9rem;
+    opacity: 0.9;
+}
+
+/* ✅ CHART CONTAINERS - SEM PROBLEMAS */
+.chart-container {
+    background: white;
+    border-radius: 12px;
+    padding: 1.5rem;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    margin-bottom: 2rem;
+}
+
+.chart-title {
+    font-size: 1.2rem;
+    font-weight: 600;
+    margin-bottom: 1rem;
+    color: #333;
+}
+
+/* ✅ CANVAS - GARANTIR ESTABILIDADE */
+canvas {
+    display: block !important;
+    width: 100% !important;
+    height: auto !important;
+    max-width: 100% !important;
+    /* ❌ NENHUMA TRANSIÇÃO OU ANIMAÇÃO */
+}
+
+/* ✅ RECENT EMAILS - SEM PROBLEMAS */
+.recent-emails {
+    background: white;
+    border-radius: 12px;
+    padding: 1.5rem;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+/* ✅ EMAIL ITEMS - REMOVENDO TRANSITIONS PROBLEMÁTICAS */
+.email-item {
+    border-left: 4px solid #e2e8f0;
+    padding: 1rem;
+    margin-bottom: 1rem;
+    background: #f8fafc;
+    border-radius: 0 8px 8px 0;
+    /* ❌ REMOVIDO: transition: all 0.3s ease; */
+}
+
+.email-item:hover {
+    background: #f1f5f9;
+    border-left-color: #667eea;
+    /* ❌ SEM TRANSFORMS */
+}
+
+.email-item.productive {
+    border-left-color: #10b981;
+}
+
+.email-item.unproductive {
+    border-left-color: #ef4444;
+}
+
+.email-item.neutral {
+    border-left-color: #f59e0b;
+}
+
+.email-subject {
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+    color: #1f2937;
+}
+
+.email-meta {
+    font-size: 0.8rem;
+    color: #6b7280;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+/* ✅ CONFIDENCE BADGES - SEM PROBLEMAS */
+.confidence-badge {
+    background: #e5e7eb;
+    color: #374151;
+    padding: 0.25rem 0.5rem;
+    border-radius: 9999px;
+    font-size: 0.75rem;
+    font-weight: 500;
+}
+
+.confidence-high {
+    background: #d1fae5;
+    color: #047857;
+}
+
+.confidence-medium {
+    background: #fef3c7;
+    color: #92400e;
+}
+
+.confidence-low {
+    background: #fee2e2;
+    color: #dc2626;
+}
+
+/* ✅ ACTION BUTTONS - REMOVENDO TRANSFORMS PROBLEMÁTICOS */
+.action-buttons {
+    display: flex;
+    gap: 1rem;
+    margin-bottom: 2rem;
+}
+
+.btn-dashboard {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border: none;
+    padding: 0.75rem 1.5rem;
+    border-radius: 8px;
+    font-weight: 500;
+    cursor: pointer;
+    /* ❌ REMOVIDO: transition: all 0.3s ease; */
+    text-decoration: none;
+    display: inline-block;
+}
+
+.btn-dashboard:hover {
+    /* ❌ REMOVIDO: transform: translateY(-2px); */
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+    color: white;
+    text-decoration: none;
+}
+
+/* ✅ LOADING SPINNER - CONTROLADO (APENAS SE NECESSÁRIO) */
+.loading-spinner {
+    border: 4px solid #f3f4f6;
+    border-top: 4px solid #667eea;
+    border-radius: 50%;
+    width: 40px;
+    height: 40px;
+    margin: 2rem auto;
+    /* ✅ ANIMAÇÃO APENAS QUANDO CLASSE .loading ESTIVER PRESENTE */
+}
+
+.loading .loading-spinner {
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+/* ✅ ALERTS - SEM PROBLEMAS */
+.alert-info {
+    background: #dbeafe;
+    border: 1px solid #93c5fd;
+    color: #1e40af;
+    padding: 1rem;
+    border-radius: 8px;
+    margin-bottom: 1rem;
+}
+
+/* ✅ SYSTEM STATUS - SEM PROBLEMAS */
+.system-status {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 2rem;
+}
+
+.status-indicator {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background: #10b981;
+}
+
+.status-indicator.warning {
+    background: #f59e0b;
+}
+
+.status-indicator.error {
+    background: #ef4444;
+}
+
+.status-indicator.success {
+    background: #10b981;
+}
+
+/* ✅ MEDIA QUERIES - RESPONSIVIDADE SEM PROBLEMAS */
+@media (max-width: 768px) {
+    .dashboard-grid {
+        grid-template-columns: 1fr;
+        gap: 1rem;
+    }
+    
+    .stats-number {
+        font-size: 2rem;
+    }
+    
+    .chart-container {
+        padding: 1rem;
+    }
+    
+    .action-buttons {
+        flex-direction: column;
+    }
+}
+
+/* ✅ PREVENIR CONFLITOS COM CHART.JS */
+.chart-container canvas {
+    position: relative !important;
+    display: block !important;
+    width: 100% !important;
+    height: auto !important;
+    /* ❌ NENHUMA ANIMAÇÃO OU TRANSIÇÃO */
+}
+
+/* ✅ UTILITY CLASSES */
+.text-center {
+    text-align: center;
+}
+
+.mb-0 {
+    margin-bottom: 0 !important;
+}
+
+.mt-2 {
+    margin-top: 0.5rem;
+}
+
+.p-2 {
+    padding: 0.5rem;
+}
+
+.p-3 {
+    padding: 1rem;
+}
