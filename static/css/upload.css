@@ -1,65 +1,377 @@
-/* Upload interface specific styles */
+/* ===============================================
+   📤 Black Purple Upload Interface
+   =============================================== */
+
+/* Upload Zone - Black Background */
 .upload-zone {
-    transition: all 0.3s ease;
-    cursor: pointer;
-    background-color: var(--light-color);
+  background: var(--bg-tertiary);
+  border: 2px dashed var(--border-color);
+  border-radius: var(--radius-lg);
+  padding: 3rem 2rem;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  margin-bottom: 1.5rem;
+  position: relative;
+  overflow: hidden;
+}
+
+.upload-zone::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(139, 92, 246, 0.1);
+  opacity: 0;
+  transition: opacity 0.2s ease;
 }
 
 .upload-zone:hover {
-    background-color: rgba(13, 110, 253, 0.05);
-    border-color: var(--primary-color) !important;
+  border-color: var(--accent-primary);
+  background: var(--bg-tertiary);
+}
+
+.upload-zone:hover::before {
+  opacity: 1;
 }
 
 .upload-zone.dragover {
-    background-color: rgba(13, 110, 253, 0.1);
-    border-color: var(--primary-color) !important;
-    transform: scale(1.02);
+  border-color: var(--accent-primary);
+  background: var(--bg-tertiary);
 }
 
-/* Form styling */
-.form-control:focus {
-    border-color: var(--primary-color);
-    box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.25);
+.upload-zone.dragover::before {
+  opacity: 1;
 }
 
-.form-control-lg {
-    border-radius: var(--border-radius);
+.upload-zone i {
+  font-size: 3rem;
+  color: var(--accent-primary);
+  margin-bottom: 1rem;
+  position: relative;
+  z-index: 1;
 }
 
-/* Results styling */
-.confidence-bar {
-    height: 10px;
-    border-radius: 5px;
-    background: linear-gradient(90deg, var(--danger-color), var(--warning-color), var(--success-color));
+.upload-zone h4 {
+  color: var(--text-primary);
+  margin-bottom: 0.5rem;
+  font-weight: 600;
+  position: relative;
+  z-index: 1;
+}
+
+.upload-zone p {
+  color: var(--text-secondary);
+  margin-bottom: 0;
+  position: relative;
+  z-index: 1;
+}
+
+/* Form Floating Labels - Black Theme */
+.form-floating {
+  position: relative;
+  margin-bottom: 1rem;
+}
+
+.form-floating .form-control {
+  height: auto;
+  padding: 1rem 0.75rem 0.5rem 0.75rem;
+  border: 1px solid var(--border-color);
+  background: var(--bg-tertiary);
+}
+
+.form-floating label {
+  position: absolute;
+  top: 0;
+  left: 0.75rem;
+  padding: 1rem 0 0 0;
+  color: var(--text-muted);
+  font-size: 0.875rem;
+  transition: all 0.2s ease;
+  pointer-events: none;
+}
+
+.form-floating .form-control:focus ~ label,
+.form-floating .form-control:not(:placeholder-shown) ~ label {
+  transform: scale(0.85) translateY(-0.5rem);
+  color: var(--accent-primary);
+}
+
+.form-floating .form-control:focus {
+  border-color: var(--accent-primary);
+  box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.2);
+}
+
+/* Results Section - Black & Purple */
+.results-section {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  padding: 1.5rem;
+  margin-top: 1.5rem;
+  border-left: 3px solid var(--accent-primary);
 }
 
 .result-badge {
-    font-size: 1.1em;
-    padding: 0.5rem 1rem;
-    border-radius: 20px;
+  display: inline-flex;
+  align-items: center;
+  padding: 0.5rem 1rem;
+  border-radius: 20px;
+  font-weight: 600;
+  font-size: 0.875rem;
+  margin-bottom: 1rem;
 }
 
-/* Loading states */
+.result-badge.productive {
+  background: rgba(34, 197, 94, 0.2);
+  color: var(--accent-success);
+}
+
+.result-badge.unproductive {
+  background: rgba(239, 68, 68, 0.2);
+  color: var(--accent-danger);
+}
+
+.result-badge.neutral {
+  background: rgba(245, 158, 11, 0.2);
+  color: var(--accent-warning);
+}
+
+/* Confidence Section - Purple */
+.confidence-section {
+  margin: 1rem 0;
+}
+
+.confidence-label {
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+  margin-bottom: 0.5rem;
+  font-weight: 500;
+}
+
+.confidence-bar {
+  width: 100%;
+  height: 8px;
+  background: var(--bg-tertiary);
+  border-radius: 4px;
+  overflow: hidden;
+  margin-bottom: 0.5rem;
+}
+
+.confidence-fill {
+  height: 100%;
+  background: var(--accent-primary);
+  transition: width 0.3s ease;
+  border-radius: 4px;
+}
+
+.confidence-text {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  text-align: center;
+}
+
+/* Processing States - Purple Spinner */
 .btn.loading {
-    pointer-events: none;
+  position: relative;
+  pointer-events: none;
+  opacity: 0.7;
 }
 
-.btn.loading .btn-text {
-    opacity: 0.7;
+.btn.loading::after {
+  content: '';
+  position: absolute;
+  width: 16px;
+  height: 16px;
+  margin: auto;
+  border: 2px solid transparent;
+  border-top-color: currentColor;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+}
+
+/* Upload Progress - Purple */
+.upload-progress {
+  margin-top: 1rem;
+}
+
+.progress-label {
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+  margin-bottom: 0.5rem;
+}
+
+.progress-bar {
+  width: 100%;
+  height: 6px;
+  background: var(--bg-tertiary);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.progress-fill {
+  height: 100%;
+  background: var(--accent-primary);
+  transition: width 0.3s ease;
+  border-radius: 3px;
+}
+
+/* Messages - Enhanced Contrast */
+.error-message {
+  background: rgba(239, 68, 68, 0.15);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  color: var(--accent-danger);
+  padding: 1rem;
+  border-radius: var(--radius);
+  margin-top: 1rem;
+  border-left: 3px solid var(--accent-danger);
+}
+
+.success-message {
+  background: rgba(34, 197, 94, 0.15);
+  border: 1px solid rgba(34, 197, 94, 0.3);
+  color: var(--accent-success);
+  padding: 1rem;
+  border-radius: var(--radius);
+  margin-top: 1rem;
+  border-left: 3px solid var(--accent-success);
+}
+
+/* Upload Steps - Black Background */
+.upload-steps {
+  display: flex;
+  gap: 1rem;
+  margin-bottom: 2rem;
+  padding: 1rem;
+  background: var(--bg-tertiary);
+  border-radius: var(--radius);
+}
+
+.upload-step {
+  flex: 1;
+  text-align: center;
+  padding: 0.5rem;
+  border-radius: var(--radius);
+  transition: all 0.2s ease;
+}
+
+.upload-step.active {
+  background: rgba(139, 92, 246, 0.15);
+  color: var(--accent-primary);
+}
+
+.upload-step.completed {
+  background: rgba(34, 197, 94, 0.15);
+  color: var(--accent-success);
+}
+
+.step-number {
+  display: block;
+  font-weight: 700;
+  font-size: 1.125rem;
+  margin-bottom: 0.25rem;
+}
+
+.step-label {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+
+/* File Info - Purple Accent */
+.file-info {
+  background: var(--bg-tertiary);
+  padding: 1rem;
+  border-radius: var(--radius);
+  margin-top: 1rem;
+  border-left: 3px solid var(--accent-primary);
+}
+
+.file-name {
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 0.25rem;
+}
+
+.file-size {
+  font-size: 0.875rem;
+  color: var(--text-secondary);
 }
 
 /* Animations */
-@keyframes resultFadeIn {
-    from {
-        opacity: 0;
-        transform: translateY(30px);
-    }
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .result-animate {
-    animation: resultFadeIn 0.5s ease-out;
+  animation: fadeInUp 0.3s ease forwards;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+.processing {
+  animation: pulse 1.5s ease-in-out infinite;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .upload-zone {
+    padding: 2rem 1rem;
+  }
+  
+  .upload-zone i {
+    font-size: 2rem;
+  }
+  
+  .results-section {
+    padding: 1rem;
+  }
+  
+  .upload-steps {
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+  
+  .upload-step {
+    padding: 0.75rem;
+  }
+}
+
+/* Drag and Drop Enhancements - Whitesmoke Text */
+.drag-instructions {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  color: var(--text-primary);
+  font-weight: 600;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+  pointer-events: none;
+}
+
+.upload-zone.dragover .drag-instructions {
+  opacity: 1;
+}
+
+.upload-zone.dragover > *:not(.drag-instructions) {
+  opacity: 0.3;
 }
