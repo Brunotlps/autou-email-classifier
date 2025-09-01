@@ -1,3 +1,6 @@
+import os
+from dotenv import load_dotenv
+
 """
 Django settings for core project.
 
@@ -16,6 +19,10 @@ from pathlib import Path
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
 
+# Load environment variables
+load_dotenv(BASE_DIR / ".env")
+
+
 
 # Initialize environment variables
 env = environ.Env(
@@ -24,69 +31,69 @@ env = environ.Env(
 )
 
 # Take environment variables from .env file
-environ.Env.read_env(BASE_DIR / '.env')
+environ.Env.read_env(BASE_DIR / ".env")
 
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = env('SECRET_KEY', default='django-insecure-change-me-in-production')
+SECRET_KEY = env("SECRET_KEY", default="django-insecure-change-me-in-production")
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = env('DEBUG', default=True)
+DEBUG = env("DEBUG", default=True)
 
-ALLOWED_HOSTS = env.list('ALLOWED_HOSTS', default=['localhost', '127.0.0.1', 'testserver', '*'])
+ALLOWED_HOSTS = env.list("ALLOWED_HOSTS", default=["localhost", "127.0.0.1", "testserver", "*"])
 
 # Application definition
 DJANGO_APPS = [
-    'django.contrib.admin',
-    'django.contrib.auth',
-    'django.contrib.contenttypes',
-    'django.contrib.sessions',
-    'django.contrib.messages',
-    'django.contrib.staticfiles',
+    "django.contrib.admin",
+    "django.contrib.auth",
+    "django.contrib.contenttypes",
+    "django.contrib.sessions",
+    "django.contrib.messages",
+    "django.contrib.staticfiles",
 ]
 
 THIRD_PARTY_APPS = [
-    'rest_framework',
-    'corsheaders',
-    'drf_spectacular',
+    "rest_framework",
+    "corsheaders",
+    "drf_spectacular",
 ]
 
 LOCAL_APPS = [
-    'apps.emails',
-    'apps.classifier',
-    'apps.frontend',
+    "apps.emails",
+    "apps.classifier",
+    "apps.frontend",
 ]
 
 INSTALLED_APPS = DJANGO_APPS + THIRD_PARTY_APPS + LOCAL_APPS
 
 MIDDLEWARE = [
-    'django.middleware.security.SecurityMiddleware',
-    'whitenoise.middleware.WhiteNoiseMiddleware',
-    'corsheaders.middleware.CorsMiddleware',
-    'django.contrib.sessions.middleware.SessionMiddleware',
-    'django.middleware.common.CommonMiddleware',
-    'django.middleware.csrf.CsrfViewMiddleware',
-    'django.contrib.auth.middleware.AuthenticationMiddleware',
-    'django.contrib.messages.middleware.MessageMiddleware',
-    'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    "django.middleware.security.SecurityMiddleware",
+    "whitenoise.middleware.WhiteNoiseMiddleware",
+    "corsheaders.middleware.CorsMiddleware",
+    "django.contrib.sessions.middleware.SessionMiddleware",
+    "django.middleware.common.CommonMiddleware",
+    "django.middleware.csrf.CsrfViewMiddleware",
+    "django.contrib.auth.middleware.AuthenticationMiddleware",
+    "django.contrib.messages.middleware.MessageMiddleware",
+    "django.middleware.clickjacking.XFrameOptionsMiddleware",
 ]
 
 ROOT_URLCONF = "core.urls"
 
 TEMPLATES = [
     {
-        'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [BASE_DIR / 'templates'],
-        'APP_DIRS': True,
-        'OPTIONS': {
-            'context_processors': [
-                'django.template.context_processors.debug',
-                'django.template.context_processors.request',
-                'django.contrib.auth.context_processors.auth',
-                'django.contrib.messages.context_processors.messages',
+        "BACKEND": "django.template.backends.django.DjangoTemplates",
+        "DIRS": [BASE_DIR / "templates"],
+        "APP_DIRS": True,
+        "OPTIONS": {
+            "context_processors": [
+                "django.template.context_processors.debug",
+                "django.template.context_processors.request",
+                "django.contrib.auth.context_processors.auth",
+                "django.contrib.messages.context_processors.messages",
             ],
         },
     },
@@ -128,8 +135,8 @@ AUTH_PASSWORD_VALIDATORS = [
 # Internationalization
 # https://docs.djangoproject.com/en/5.2/topics/i18n/
 
-LANGUAGE_CODE = 'pt-br'
-TIME_ZONE = 'America/Sao_Paulo'
+LANGUAGE_CODE = "pt-br"
+TIME_ZONE = "America/Sao_Paulo"
 USE_I18N = True
 USE_TZ = True
 
@@ -137,9 +144,9 @@ USE_TZ = True
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/5.2/howto/static-files/
 
-STATIC_URL = '/static/'
-STATIC_ROOT = BASE_DIR / 'staticfiles'
-STATICFILES_DIRS = [BASE_DIR / 'static']
+STATIC_URL = "/static/"
+STATIC_ROOT = BASE_DIR / "staticfiles"
+STATICFILES_DIRS = [BASE_DIR / "static"]
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
@@ -149,26 +156,17 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 # Django REST Framework
 REST_FRAMEWORK = {
-    'DEFAULT_AUTHENTICATION_CLASSES': [
+    "DEFAULT_AUTHENTICATION_CLASSES": [
         # 'rest_framework.authentication.SessionAuthentication',
         # 'rest_framework.authentication.TokenAuthentication',
     ],
-    'DEFAULT_PERMISSION_CLASSES': [
-        'rest_framework.permissions.AllowAny',
+    "DEFAULT_PERMISSION_CLASSES": [
+        "rest_framework.permissions.AllowAny",
         # 'rest_framework.permissions.IsAuthenticatedOrReadOnly',
     ],
-    'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
-    'PAGE_SIZE': 20,
-    'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
-}
-
-# drf-spectacular settings (API Documentation)
-SPECTACULAR_SETTINGS = {
-    'TITLE': 'AutoU Email Classifier API',
-    'DESCRIPTION': 'API para classificação automática de emails e geração de respostas',
-    'VERSION': '1.0.0',
-    'SERVE_INCLUDE_SCHEMA': False,
-    'SCHEMA_PATH_PREFIX': '/api/',
+    "DEFAULT_PAGINATION_CLASS": "rest_framework.pagination.PageNumberPagination",
+    "PAGE_SIZE": 20,
+    "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
 }
 
 # CORS settings
@@ -183,65 +181,69 @@ CORS_ALLOW_CREDENTIALS = True
 
 # Cache configuration
 CACHES = {
-    'default': {
-        'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
-        'LOCATION': 'unique-snowflake',
+    "default": {
+        "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
+        "LOCATION": "unique-snowflake",
     }
 }
 
 # Logging configuration
 LOGGING = {
-    'version': 1,
-    'disable_existing_loggers': False,
-    'formatters': {
-        'verbose': {
-            'format': '{levelname} {asctime} {module} {process:d} {thread:d} {message}',
-            'style': '{',
+    "version": 1,
+    "disable_existing_loggers": False,
+    "formatters": {
+        "verbose": {
+            "format": "{levelname} {asctime} {module} {process:d} {thread:d} {message}",
+            "style": "{",
         },
     },
-    'handlers': {
-        'console': {
-            'class': 'logging.StreamHandler',
-            'formatter': 'verbose',
+    "handlers": {
+        "console": {
+            "class": "logging.StreamHandler",
+            "formatter": "verbose",
         },
     },
-    'root': {
-        'handlers': ['console'],
-        'level': 'INFO',
+    "root": {
+        "handlers": ["console"],
+        "level": "INFO",
     },
 }
 
 # AI/ML Configuration
 AI_SETTINGS = {
-    # Hugging Face API
-    'HUGGINGFACE_API_TOKEN': env('HUGGINGFACE_API_TOKEN', default=''),
-    'HUGGINGFACE_API_URL': env('HUGGINGFACE_API_URL', default='https://api-inference.huggingface.co/models'),
-    
-    # Models
-    'CLASSIFICATION_MODEL': env('CLASSIFICATION_MODEL', default='cardiffnlp/twitter-roberta-base-sentiment-latest'),
-    'RESPONSE_GENERATION_MODEL': env('RESPONSE_GENERATION_MODEL', default='microsoft/DialoGPT-medium'),
-    'TEXT_EMBEDDING_MODEL': env('TEXT_EMBEDDING_MODEL', default='sentence-transformers/all-MiniLM-L6-v2'),
-    'BACKUP_CLASSIFICATION_MODEL': env('BACKUP_CLASSIFICATION_MODEL', default='distilbert-base-uncased-finetuned-sst-2-english'),
-    
-    # Processing Settings
-    'AI_MODE': env('AI_MODE', default='online'),
-    'AI_USE_LOCAL_MODELS': env.bool('AI_USE_LOCAL_MODELS', default=False),
-    'AI_CONFIDENCE_THRESHOLD': env.float('AI_CONFIDENCE_THRESHOLD', default=0.7),
-    'MAX_RESPONSE_LENGTH': env.int('MAX_RESPONSE_LENGTH', default=150),
-    'PROCESSING_TIMEOUT': env.int('PROCESSING_TIMEOUT', default=30),
-    'AI_RETRY_ATTEMPTS': env.int('AI_RETRY_ATTEMPTS', default=3),
-    'AI_FALLBACK_TO_LOCAL': env.bool('AI_FALLBACK_TO_LOCAL', default=True),
-    
-    # Cache and Rate Limiting
-    'AI_CACHE_TTL': env.int('AI_CACHE_TTL', default=3600),
-    'AI_RATE_LIMIT_PER_MINUTE': env.int('AI_RATE_LIMIT_PER_MINUTE', default=60),
+    "HUGGINGFACE_API_TOKEN": os.getenv("HUGGINGFACE_API_TOKEN"),
+    "HUGGINGFACE_API_URL": os.getenv("HUGGINGFACE_API_URL", "https://api-inference.huggingface.co/models"),
+    "CLASSIFICATION_MODEL": os.getenv("CLASSIFICATION_MODEL", "cardiffnlp/twitter-roberta-base-sentiment"),
+    "RESPONSE_GENERATION_MODEL": os.getenv("RESPONSE_GENERATION_MODEL", "microsoft/DialoGPT-medium"),
+    "BACKUP_CLASSIFICATION_MODEL": os.getenv("BACKUP_CLASSIFICATION_MODEL", "distilbert-base-uncased-finetuned-sst-2-english"),
+    "AI_MODE": os.getenv("AI_MODE", "online"),
+    "AI_USE_LOCAL_MODELS": os.getenv("AI_USE_LOCAL_MODELS", "False").lower() == "true",
+    "AI_CONFIDENCE_THRESHOLD": float(os.getenv("AI_CONFIDENCE_THRESHOLD", "0.7")),
+    "AI_RETRY_ATTEMPTS": int(os.getenv("AI_RETRY_ATTEMPTS", "3")),
+    "AI_FALLBACK_TO_LOCAL": os.getenv("AI_FALLBACK_TO_LOCAL", "True").lower() == "true",
+    "AI_CACHE_TTL": int(os.getenv("AI_CACHE_TTL", "3600")),
+    "AI_RATE_LIMIT_PER_MINUTE": int(os.getenv("AI_RATE_LIMIT_PER_MINUTE", "60")),
+    "PROCESSING_TIMEOUT": int(os.getenv("PROCESSING_TIMEOUT", "30")),
+    "MAX_RESPONSE_LENGTH": int(os.getenv("MAX_RESPONSE_LENGTH", "500")),
 }
 
 # Logging específico para IA
-LOGGING['loggers'] = {
-    'apps.classifier.ai_service': {
-        'handlers': ['console'],
-        'level': 'DEBUG',
-        'propagate': False,
+LOGGING["loggers"] = {
+    "apps.classifier.ai_service": {
+        "handlers": ["console"],
+        "level": "DEBUG",
+        "propagate": False,
     },
+}
+
+# ===============================================
+# 📚 DRF SPECTACULAR (API DOCUMENTATION)
+# ===============================================
+SPECTACULAR_SETTINGS = {
+    'TITLE': 'AutoU Email Classifier API',
+    'DESCRIPTION': 'Sistema inteligente de classificação de emails usando IA',
+    'VERSION': '1.0.0',
+    'SERVE_INCLUDE_SCHEMA': False,
+    'COMPONENT_SPLIT_REQUEST': True,
+    'SCHEMA_PATH_PREFIX': '/api/',
 }

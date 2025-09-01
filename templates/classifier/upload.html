@@ -1,8 +1,62 @@
 {% extends 'base.html' %}
 {% load static %}
 
+{% block title %}Upload{% endblock %}
+
 {% block extra_css %}
 <link rel="stylesheet" href="{% static 'css/upload.css' %}">
+<style>
+.classification-badge.productive {
+    background: linear-gradient(135deg, #22c55e, #16a34a) !important;
+    color: white !important;
+    border: 2px solid #22c55e;
+}
+
+.classification-badge.unproductive {
+    background: linear-gradient(135deg, #ef4444, #dc2626) !important;
+    color: white !important;
+    border: 2px solid #ef4444;
+}
+
+.classification-badge.neutral {
+    background: linear-gradient(135deg, #f59e0b, #d97706) !important;
+    color: white !important;
+    border: 2px solid #f59e0b;
+}
+
+.info-card {
+    transition: all 0.2s ease;
+    border: 1px solid var(--border-color);
+}
+
+.info-card:hover {
+    box-shadow: var(--shadow-medium);
+    transform: translateY(-2px);
+}
+
+.confidence-section .progress {
+    box-shadow: inset 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.reasoning-card {
+    border: 1px solid rgba(139, 92, 246, 0.2);
+}
+
+.info-item strong {
+    color: var(--text-primary);
+    font-weight: 600;
+}
+
+.upload-zone {
+    transition: all 0.3s ease;
+    cursor: pointer;
+}
+
+.upload-zone:hover {
+    background: rgba(139, 92, 246, 0.05);
+    border-color: var(--accent-primary) !important;
+}
+</style>
 {% endblock %}
 
 {% block content %}
@@ -11,16 +65,13 @@
         <div class="col-lg-8">
             <!-- Header Section -->
             <div class="text-center mb-5">
-                <h2 class="fw-bold text-primary mb-3">
-                    <i class="fas fa-brain me-2"></i>Classificação Inteligente
+                <h2 class="fw-bold mb-3" style="background: var(--gradient-primary); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">
+                    <i class="fas fa-brain me-2"></i>Automatize sua Caixa de Entrada
                 </h2>
-                <p class="lead text-muted">
-                    Cole o texto do email ou envie arquivo para análise por IA
-                </p>
             </div>
 
             <!-- Upload Form -->
-            <div class="card shadow-lg border-0">
+            <div class="card shadow-lg border-0" style="background: var(--bg-secondary); border: 1px solid var(--border-color) !important;">
                 <div class="card-body p-4">
                     <form id="classificationForm" class="needs-validation" novalidate>
                         {% csrf_token %}
@@ -34,41 +85,44 @@
                                    class="form-control form-control-lg" 
                                    id="emailSubject" 
                                    name="subject"
-                                   placeholder="Ex: Agendamento de reunião"
-                                   required>
-                            <div class="invalid-feedback">
-                                Por favor, insira o assunto do email.
+                                   placeholder="Ex: Reunião de acompanhamento do projeto"
+                                   style="background: var(--bg-tertiary); border-color: var(--border-color); color: var(--text-primary);">
+                            <div class="form-text text-muted">
+                                <i class="fas fa-info-circle me-1"></i>O assunto ajuda a IA a entender melhor o contexto
                             </div>
                         </div>
 
                         <!-- Email Content -->
                         <div class="mb-4">
                             <label for="emailContent" class="form-label fw-semibold">
-                                <i class="fas fa-file-text me-2 text-primary"></i>Conteúdo do Email
+                                <i class="fas fa-file-text me-2 text-primary"></i>Conteúdo do Email <span class="text-danger">*</span>
                             </label>
                             <textarea class="form-control" 
                                       id="emailContent" 
                                       name="content"
                                       rows="8" 
-                                      placeholder="Cole aqui o conteúdo completo do email..."
+                                      placeholder="Cole aqui o conteúdo completo do email que deseja analisar..."
+                                      style="background: var(--bg-tertiary); border-color: var(--border-color); color: var(--text-primary);"
                                       required></textarea>
+                            <div class="form-text text-muted">
+                                <i class="fas fa-lightbulb me-1"></i>Quanto mais detalhado, mais precisa será a análise
+                            </div>
                             <div class="invalid-feedback">
-                                Por favor, insira o conteúdo do email.
+                                Por favor, insira o conteúdo do email para análise.
                             </div>
                         </div>
 
                         <!-- File Upload Alternative -->
                         <div class="mb-4">
                             <label class="form-label fw-semibold">
-                                <i class="fas fa-upload me-2 text-primary"></i>Ou envie um arquivo
+                                <i class="fas fa-upload me-2 text-primary"></i>Ou Carregue um Arquivo
                             </label>
                             <div class="upload-zone border-2 border-dashed rounded p-4 text-center" 
-                                 id="uploadZone">
-                                <i class="fas fa-cloud-upload-alt fa-3x text-muted mb-3"></i>
-                                <p class="mb-2 text-muted">
-                                    Arraste arquivos aqui ou <span class="text-primary">clique para selecionar</span>
-                                </p>
-                                <small class="text-muted">Suporte: .txt, .pdf (máx. 5MB)</small>
+                                 id="uploadZone"
+                                 style="border-color: var(--border-color) !important; background: var(--bg-tertiary);">
+                                <i class="fas fa-cloud-upload-alt fa-3x text-primary mb-3"></i>
+                                <h6 class="text-primary mb-2">Arraste arquivos aqui ou clique para selecionar</h6>
+                                
                                 <input type="file" 
                                        class="d-none" 
                                        id="fileInput" 
@@ -81,26 +135,52 @@
                         <div class="d-grid">
                             <button type="submit" 
                                     class="btn btn-primary btn-lg" 
-                                    id="classifyBtn">
+                                    id="classifyBtn"
+                                    style="background: var(--accent-primary); border-color: var(--accent-primary); padding: 1rem;">
                                 <i class="fas fa-magic me-2"></i>
-                                <span class="btn-text">Enviar</span>
+                                <span class="btn-text">Analisar</span>
                                 <span class="spinner-border spinner-border-sm ms-2 d-none" 
                                       id="loadingSpinner"></span>
                             </button>
+                        </div>
+                        
+                        <div class="text-center mt-3">
+                            <small class="text-muted">
+                                <i class="fas fa-clock me-1"></i>Análise normalmente leva 2-5 segundos
+                            </small>
                         </div>
                     </form>
                 </div>
             </div>
 
             <!-- Results Section -->
-            <div class="card mt-4 d-none" id="resultsCard">
+            <div class="card mt-4 d-none" id="resultsCard" style="background: var(--bg-secondary); border: 1px solid var(--border-color);">
                 <div class="card-header bg-success text-white">
                     <h5 class="mb-0">
                         <i class="fas fa-check-circle me-2"></i>Resultado da Classificação
                     </h5>
                 </div>
-                <div class="card-body" id="resultsContent">
+                <div class="card-body p-4" id="resultsContent">
                     <!-- Results will be populated by JavaScript -->
+                </div>
+            </div>
+
+            <!-- Feature Cards -->
+            <div class="row g-4 mt-4">
+                <div class="col-md-4">
+                    <div class="text-center p-3" style="background: var(--bg-tertiary); border-radius: var(--radius); border: 1px solid var(--border-color);">
+                        <i class="fas fa-brain fa-2x text-success mb-3"></i>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="text-center p-3" style="background: var(--bg-tertiary); border-radius: var(--radius); border: 1px solid var(--border-color);">
+                        <i class="fas fa-shield-alt fa-2x text-primary mb-3"></i>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="text-center p-3" style="background: var(--bg-tertiary); border-radius: var(--radius); border: 1px solid var(--border-color);">
+                        <i class="fas fa-clock fa-2x text-warning mb-3"></i>
+                    </div>
                 </div>
             </div>
         </div>

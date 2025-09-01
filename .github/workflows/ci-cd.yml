@@ -1,0 +1,260 @@
+name: 🚀 AutoU CI/CD Pipeline
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+
+jobs:
+  # ===============================================
+  # 🧪 TESTES UNITÁRIOS E INTEGRAÇÃO
+  # ===============================================
+  test:
+    name: 🧪 Run Tests
+    runs-on: ubuntu-latest
+    
+    strategy:
+      matrix:
+        python-version: [3.11]
+    
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: test_autou
+          POSTGRES_USER: postgres
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+
+    steps:
+    - name: 📥 Checkout repository
+      uses: actions/checkout@v4
+
+    - name: 🐍 Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ matrix.python-version }}
+        cache: 'pip'
+
+    - name: 📦 Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+        pip install pytest pytest-django coverage pytest-cov
+
+    - name: 🔍 Lint with flake8
+      run: |
+        pip install flake8
+        # stop the build if there are Python syntax errors or undefined names
+        flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
+        # exit-zero treats all errors as warnings. The GitHub editor is 127 chars wide
+        flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
+
+    - name: 🔧 Setup Django environment
+      env:
+        DJANGO_SETTINGS_MODULE: core.settings.docker
+        DATABASE_URL: postgres://postgres:postgres@localhost:5432/test_autou
+        SECRET_KEY: test-secret-key-for-ci
+      run: |
+        python manage.py collectstatic --noinput
+        python manage.py migrate --noinput
+
+    - name: 🧪 Run tests with pytest
+      env:
+        DJANGO_SETTINGS_MODULE: core.settings.docker
+        DATABASE_URL: postgres://postgres:postgres@localhost:5432/test_autou
+        SECRET_KEY: test-secret-key-for-ci
+      run: |
+        coverage run -m pytest tests/ -v
+        coverage report
+        coverage xml
+
+    - name: 📊 Upload coverage to Codecov
+      uses: codecov/codecov-action@v3
+      with:
+        file: ./coverage.xml
+        flags: unittests
+        name: codecov-umbrella
+
+  # ===============================================
+  # 🔍 CODE QUALITY E SECURITY
+  # ===============================================
+  quality:
+    name: 🔍 Code Quality
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: 📥 Checkout repository
+      uses: actions/checkout@v4
+
+    - name: 🐍 Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+
+    - name: 📦 Install quality tools
+      run: |
+        python -m pip install --upgrade pip
+        pip install black isort flake8 bandit safety
+
+    - name: 🎨 Check code formatting with Black
+      run: black --check --diff .
+
+    - name: 📋 Check import sorting with isort
+      run: isort --check-only --diff .
+
+    - name: 🔍 Lint with flake8
+      run: flake8 .
+
+    - name: 🔒 Security check with bandit
+      run: bandit -r . -x tests/
+
+    - name: 🛡️ Check dependencies with safety
+      run: safety check
+
+  # ===============================================
+  # 🐳 BUILD E PUSH DOCKER IMAGE
+  # ===============================================
+  build:
+    name: 🐳 Build Docker Image
+    runs-on: ubuntu-latest
+    needs: [test, quality]
+    
+    outputs:
+      image: ${{ steps.image.outputs.image }}
+      digest: ${{ steps.build.outputs.digest }}
+
+    steps:
+    - name: 📥 Checkout repository
+      uses: actions/checkout@v4
+
+    - name: 🏗️ Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+
+    - name: 🔑 Log in to Container Registry
+      uses: docker/login-action@v3
+      with:
+        registry: ${{ env.REGISTRY }}
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: 📋 Extract metadata
+      id: meta
+      uses: docker/metadata-action@v5
+      with:
+        images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+        tags: |
+          type=ref,event=branch
+          type=ref,event=pr
+          type=sha,prefix={{branch}}-
+          type=raw,value=latest,enable={{is_default_branch}}
+
+    - name: 🏗️ Build and push Docker image
+      id: build
+      uses: docker/build-push-action@v5
+      with:
+        context: .
+        push: true
+        tags: ${{ steps.meta.outputs.tags }}
+        labels: ${{ steps.meta.outputs.labels }}
+        cache-from: type=gha
+        cache-to: type=gha,mode=max
+
+    - name: 📝 Output image name
+      id: image
+      run: echo "image=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}" >> $GITHUB_OUTPUT
+
+  # ===============================================
+  # 🚀 DEPLOY TO STAGING
+  # ===============================================
+  deploy-staging:
+    name: 🚀 Deploy to Staging
+    runs-on: ubuntu-latest
+    needs: build
+    if: github.ref == 'refs/heads/develop'
+    
+    environment:
+      name: staging
+      url: https://autou-staging.herokuapp.com
+    
+    steps:
+    - name: 📥 Checkout repository
+      uses: actions/checkout@v4
+
+    - name: 🚀 Deploy to Heroku Staging
+      uses: akhileshns/heroku-deploy@v3.12.14
+      with:
+        heroku_api_key: ${{ secrets.HEROKU_API_KEY }}
+        heroku_app_name: "autou-staging"
+        heroku_email: ${{ secrets.HEROKU_EMAIL }}
+        usedocker: true
+        docker_build_args: |
+          DJANGO_SETTINGS_MODULE
+      env:
+        DJANGO_SETTINGS_MODULE: core.settings.docker
+
+  # ===============================================
+  # 🌟 DEPLOY TO PRODUCTION
+  # ===============================================
+  deploy-production:
+    name: 🌟 Deploy to Production
+    runs-on: ubuntu-latest
+    needs: build
+    if: github.ref == 'refs/heads/main'
+    
+    environment:
+      name: production
+      url: https://autou-classifier.herokuapp.com
+    
+    steps:
+    - name: 📥 Checkout repository
+      uses: actions/checkout@v4
+
+    - name: �� Deploy to Heroku Production
+      uses: akhileshns/heroku-deploy@v3.12.14
+      with:
+        heroku_api_key: ${{ secrets.HEROKU_API_KEY }}
+        heroku_app_name: "autou-classifier"
+        heroku_email: ${{ secrets.HEROKU_EMAIL }}
+        usedocker: true
+        docker_build_args: |
+          DJANGO_SETTINGS_MODULE
+      env:
+        DJANGO_SETTINGS_MODULE: core.settings.docker
+
+  # ===============================================
+  # 🔒 SECURITY SCANNING
+  # ===============================================
+  security:
+    name: 🔒 Security Scan
+    runs-on: ubuntu-latest
+    if: github.event_name != 'pull_request'
+    
+    steps:
+    - name: 📥 Checkout repository
+      uses: actions/checkout@v4
+
+    - name: 🔍 Run Trivy vulnerability scanner
+      uses: aquasecurity/trivy-action@master
+      with:
+        scan-type: 'fs'
+        scan-ref: '.'
+        format: 'sarif'
+        output: 'trivy-results.sarif'
+
+    - name: 📊 Upload Trivy scan results to GitHub Security tab
+      uses: github/codeql-action/upload-sarif@v2
+      if: always()
+      with:
+        sarif_file: 'trivy-results.sarif'

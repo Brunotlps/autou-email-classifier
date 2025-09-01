@@ -1,15 +1,30 @@
+"""
+URLs do frontend - CORRIGIDO com indentação correta
+"""
 from django.urls import path
-from .views import HomeView, UploadView, DashboardView, DashboardTestView, ResultsView, HistoryView
+from . import views
 
-
-
-app_name = 'frontend'
+app_name = "frontend"
 
 urlpatterns = [
-    path('', HomeView.as_view(), name='home'),
-    path('upload/', UploadView.as_view(), name='upload'),
-    path('dashboard/', DashboardView.as_view(), name='dashboard'),
-    path('dashboard/test/', DashboardTestView.as_view(), name='dashboard_test'),  
-    path('results/', ResultsView.as_view(), name='results'),
-    path('history/', HistoryView.as_view(), name='history'),
+    # === PÁGINAS PRINCIPAIS ===
+    path("", views.home_view, name="home"),
+    path("upload/", views.upload_view, name="upload"),
+    path("dashboard/", views.dashboard_view, name="dashboard"),
+    path("results/", views.results_view, name="results"),
+    
+    # === ENDPOINTS AJAX ===
+    path("upload-ajax/", views.upload_ajax, name="upload_ajax"),
+    
+    # === API ENDPOINTS ===
+    path("api/classifications/", views.api_classifications, name="api_classifications"),
+    
+    # === HEALTH CHECKS ===
+    path("health/", views.health_check, name="health"),
+    path("readiness/", views.readiness_check, name="readiness"),
+    path("liveness/", views.liveness_check, name="liveness"),
+    
+    # === ALIASES PARA COMPATIBILIDADE ===
+    path("history/", views.results_view, name="history"),
+    path("dashboard/test/", views.dashboard_view, name="dashboard_test"),
 ]

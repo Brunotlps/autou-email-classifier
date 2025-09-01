@@ -1,0 +1,377 @@
+"""
+Frontend Views for AutoU Email Classifier
+Handles email upload, classification, and results display
+"""
+
+import json
+import logging
+import time
+import os
+from django.http import JsonResponse
+from django.shortcuts import render
+from django.views.decorators.csrf import csrf_exempt
+from django.views.decorators.http import require_http_methods
+from django.db import connections
+from django.core.cache import cache
+from django.conf import settings
+
+# Import models - usando os nomes corretos
+try:
+    from apps.classifier.models import Email, Classification
+    # Criar alias para compatibilidade
+    EmailClassification = Classification
+except ImportError as e:
+    logging.error(f"Error importing models: {e}")
+    # Create dummy classes to prevent immediate crash
+    class Email:
+        objects = None
+    class Classification:
+        objects = None
+    EmailClassification = Classification
+
+# Import AI service with error handling
+try:
+    from apps.classifier.ai_service import get_ai_service
+except ImportError as e:
+    logging.error(f"Error importing AI service: {e}")
+    def get_ai_service():
+        return None
+
+logger = logging.getLogger(__name__)
+def home_view(request):
+    """Render home page with existing template"""
+    context = {
+        'description': 'Sistema inteligente de classificação de emails usando IA avançada para identificar emails produtivos e improdutivos.',
+        'features': [
+            'Classificação automática com IA',
+            'Análise de produtividade em tempo real', 
+            'Interface intuitiva e responsiva',
+            'Resultados precisos e confiáveis',
+            'Histórico completo de classificações',
+            'Dashboard com estatísticas detalhadas'
+        ]
+    }
+    return render(request, 'base/home.html', context)
+
+
+
+
+def upload_view(request):
+    """Render upload page"""
+    return render(request, 'classifier/upload.html')
+
+
+@csrf_exempt
+@require_http_methods(["POST"])
+def upload_ajax(request):
+    """Handle AJAX email classification requests"""
+    try:
+        # Parse JSON data
+        data = json.loads(request.body)
+        subject = data.get('subject', 'Sem assunto')
+        content = data.get('content', '').strip()
+        
+        logger.info(f"📧 Recebendo classificação: subject='{subject}', content_length={len(content)}")
+        
+        if not content:
+            return JsonResponse({
+                'success': False, 
+                'error': 'Conteúdo do email é obrigatório'
+            })
+        
+        # Check if models are available
+        if Email.objects is None:
+            logger.error("Email model not available")
+            return JsonResponse({
+                'success': False,
+                'error': 'Modelos de banco de dados não disponíveis'
+            })
+        
+        # Create email object
+        email = Email.objects.create(
+            subject=subject,
+            content=content,
+            sender='user@upload.com'
+        )
+        
+        logger.info(f"✅ Email criado com ID: {email.id}")
+        
+        # Get AI service and classify
+        ai_service = get_ai_service()
+        if ai_service is None:
+            logger.warning("AI service not available, using fallback classification")
+            result = fallback_classification(content, subject)
+        else:
+            result = ai_service.classify_email(content, subject)
+        
+        logger.info(f"🤖 Resultado da IA: {result}")
+        
+        # Normalize classification result
+        raw_classification = result.get('classification', 'unknown').lower()
+        
+        # Map different AI responses to our standard format
+        if raw_classification in ['productive', 'legitimate', 'important', 'work', 'business']:
+            normalized_classification = 'productive'
+        elif raw_classification in ['unproductive', 'spam', 'phishing', 'junk', 'irrelevant']:
+            normalized_classification = 'unproductive'
+        elif raw_classification in ['neutral', 'moderate', 'uncertain']:
+            normalized_classification = 'neutral'
+        else:
+            # Fallback: analyze content for keywords
+            normalized_classification = analyze_content_keywords(content, subject)
+        
+        logger.info(f"📊 Classificação normalizada: {raw_classification} -> {normalized_classification}")
+        
+        # Save classification using the Classification model (renamed)
+        if Classification.objects is not None:
+            classification = Classification.objects.create(
+                email=email,
+                classification_result=normalized_classification,
+                confidence_score=result.get('confidence', 0.6),
+                reasoning=result.get('reasoning', f'Email classificado como {normalized_classification}'),
+                model_used=result.get('model', 'ai-huggingface_api'),
+                ai_model_used=result.get('model', 'ai-huggingface_api'),  # Campo original
+                processing_time=result.get('processing_time', 0),
+                processing_time_seconds=result.get('processing_time', 0),  # Campo original
+                suggested_response=generate_suggested_response(normalized_classification, subject),
+                processing_status='completed'
+            )
+            logger.info(f"💾 Classificação salva com ID: {classification.id}")
+        
+        # Generate intelligent recommended response
+        recommended_responses = {
+            'productive': f"✅ RESPONDER COM PRIORIDADE: Este email sobre '{subject}' é importante para sua produtividade. Recomendo responder dentro de 24 horas.",
+            'unproductive': f"❌ IGNORAR OU DELETAR: Este email sobre '{subject}' não contribui para sua produtividade. Pode ser movido para lixeira ou ignorado.",
+            'neutral': f"⚠️ AVALIAR CONFORME NECESSÁRIO: Este email sobre '{subject}' tem importância moderada. Responda quando tiver tempo disponível."
+        }
+        
+        # Enhanced reasoning based on classification
+        enhanced_reasoning = result.get('reasoning', '')
+        if not enhanced_reasoning or enhanced_reasoning == 'Email classificado com IA real':
+            if normalized_classification == 'productive':
+                enhanced_reasoning = f"Este email contém palavras-chave relacionadas a trabalho, projetos ou assuntos importantes. O assunto '{subject}' indica relevância profissional."
+            elif normalized_classification == 'unproductive':
+                enhanced_reasoning = f"Este email não apresenta características de produtividade. Pode ser spam, promoção ou conteúdo irrelevante baseado no assunto '{subject}'."
+            else:
+                enhanced_reasoning = f"Este email apresenta características mistas. O assunto '{subject}' sugere importância moderada."
+        
+        # Return standardized response
+        response_data = {
+            'success': True,
+            'email_id': email.id,
+            'subject': subject,
+            'classification': normalized_classification,
+            'classification_result': normalized_classification,
+            'confidence': result.get('confidence', 0.6),
+            'confidence_score': result.get('confidence', 0.6),
+            'reasoning': enhanced_reasoning,
+            'message': enhanced_reasoning,
+            'processing_time': f"{result.get('processing_time', 0):.2f}s",
+            'model_version': result.get('model', 'AI-HuggingFace'),
+            'recommended_response': recommended_responses.get(normalized_classification, 'Sem recomendação disponível'),
+            'timestamp': email.created_at.isoformat() if hasattr(email, 'created_at') else None
+        }
+        
+        logger.info(f"📤 Enviando resposta: {response_data}")
+        return JsonResponse(response_data)
+        
+    except json.JSONDecodeError:
+        logger.error("❌ Erro: JSON inválido")
+        return JsonResponse({
+            'success': False, 
+            'error': 'Dados JSON inválidos'
+        })
+        
+    except Exception as e:
+        logger.error(f"❌ Erro na classificação: {str(e)}")
+        return JsonResponse({
+            'success': False, 
+            'error': f'Erro interno: {str(e)}'
+        })
+
+
+def analyze_content_keywords(content, subject):
+    """Fallback content analysis using keywords"""
+    content_lower = content.lower()
+    subject_lower = subject.lower()
+    
+    productive_keywords = [
+        'reunião', 'meeting', 'projeto', 'project', 'trabalho', 'work', 
+        'deadline', 'prazo', 'tarefa', 'task', 'importante', 'urgent',
+        'relatório', 'report', 'apresentação', 'presentation', 'cliente',
+        'client', 'contrato', 'contract', 'proposta', 'proposal'
+    ]
+    
+    unproductive_keywords = [
+        'spam', 'promoção', 'desconto', 'oferta', 'comprar', 'venda',
+        'click here', 'free', 'winner', 'prize', 'congratulations',
+        'viagra', 'casino', 'lottery', 'investment opportunity'
+    ]
+    
+    productive_score = sum(1 for keyword in productive_keywords 
+                         if keyword in content_lower or keyword in subject_lower)
+    unproductive_score = sum(1 for keyword in unproductive_keywords 
+                           if keyword in content_lower or keyword in subject_lower)
+    
+    if productive_score > unproductive_score:
+        return 'productive'
+    elif unproductive_score > productive_score:
+        return 'unproductive'
+    else:
+        return 'neutral'
+
+
+def generate_suggested_response(classification, subject):
+    """Generate suggested response based on classification"""
+    responses = {
+        'productive': f"Obrigado pelo email sobre '{subject}'. Vou revisar e retornar em breve.",
+        'unproductive': f"Email sobre '{subject}' foi classificado como não prioritário.",
+        'neutral': f"Email sobre '{subject}' recebido e será analisado conforme necessário."
+    }
+    return responses.get(classification, 'Resposta padrão')
+
+
+def fallback_classification(content, subject):
+    """Fallback classification when AI service is not available"""
+    classification = analyze_content_keywords(content, subject)
+    
+    return {
+        'classification': classification,
+        'confidence': 0.6,
+        'reasoning': f'Classificação baseada em análise de palavras-chave (fallback). Email identificado como {classification}.',
+        'model': 'keyword-fallback',
+        'processing_time': 0.1
+    }
+
+
+def results_view(request):
+    """Results view showing classification history"""
+    return render(request, 'classifier/results.html')
+
+
+# Health check endpoints
+def health_check(request):
+    """Comprehensive health check endpoint"""
+    
+    status = {
+        'status': 'healthy',
+        'timestamp': time.time(),
+        'checks': {}
+    }
+    
+    # Database check
+    try:
+        db_conn = connections['default']
+        db_conn.cursor()
+        status['checks']['database'] = 'healthy'
+    except Exception as e:
+        status['checks']['database'] = f'unhealthy: {str(e)}'
+        status['status'] = 'unhealthy'
+    
+    # Cache check
+    try:
+        cache.set('health_check', 'test', 30)
+        cache.get('health_check')
+        status['checks']['cache'] = 'healthy'
+    except Exception as e:
+        status['checks']['cache'] = f'unhealthy: {str(e)}'
+        status['status'] = 'unhealthy'
+    
+    # AI service check
+    try:
+        ai_service = get_ai_service()
+        if ai_service:
+            status['checks']['ai_service'] = 'healthy'
+        else:
+            status['checks']['ai_service'] = 'unavailable (using fallback)'
+    except Exception as e:
+        status['checks']['ai_service'] = f'unhealthy: {str(e)}'
+    
+    response_status = 200 if status['status'] == 'healthy' else 503
+    return JsonResponse(status, status=response_status)
+
+
+def readiness_check(request):
+    """Kubernetes readiness probe"""
+    return JsonResponse({'status': 'ready'})
+
+
+def liveness_check(request):
+    """Kubernetes liveness probe"""
+    return JsonResponse({'status': 'alive'})
+
+@csrf_exempt
+def api_classifications(request):
+    """API endpoint for classifications data"""
+    try:
+        from django.core.paginator import Paginator
+        from django.db.models import Q
+        
+        # Verificar se os modelos estão disponíveis
+        if Classification.objects is None:
+            return JsonResponse({
+                'results': [],
+                'count': 0,
+                'current_page': 1,
+                'total_pages': 1,
+                'error': 'Modelos não disponíveis'
+            })
+        
+        # Parâmetros de filtro
+        classification_filter = request.GET.get('classification_result', '')
+        search_query = request.GET.get('search', '')
+        page = int(request.GET.get('page', 1))
+        page_size = int(request.GET.get('page_size', 10))
+        
+        # Construir query
+        queryset = Classification.objects.select_related('email').order_by('-classified_at')
+        
+        if classification_filter:
+            queryset = queryset.filter(classification_result=classification_filter)
+        
+        if search_query:
+            queryset = queryset.filter(
+                Q(email__subject__icontains=search_query) |
+                Q(email__content__icontains=search_query) |
+                Q(reasoning__icontains=search_query)
+            )
+        
+        # Paginação
+        paginator = Paginator(queryset, page_size)
+        page_obj = paginator.get_page(page)
+        
+        # Serializar dados
+        results = []
+        for classification in page_obj:
+            results.append({
+                'id': classification.id,
+                'classification_result': classification.classification_result,
+                'confidence_score': classification.confidence_score,
+                'reasoning': classification.reasoning,
+                'classified_at': classification.classified_at.isoformat() if classification.classified_at else None,
+                'email': {
+                    'id': classification.email.id if classification.email else None,
+                    'subject': classification.email.subject if classification.email else 'Sem assunto',
+                    'content': classification.email.content if classification.email else '',
+                    'sender': classification.email.sender if classification.email else ''
+                } if classification.email else None
+            })
+        
+        return JsonResponse({
+            'results': results,
+            'count': paginator.count,
+            'current_page': page,
+            'total_pages': paginator.num_pages,
+            'has_next': page_obj.has_next(),
+            'has_previous': page_obj.has_previous()
+        })
+        
+    except Exception as e:
+        logger.error(f"❌ Erro na API de classificações: {str(e)}")
+        return JsonResponse({
+            'results': [],
+            'count': 0,
+            'current_page': 1,
+            'total_pages': 1,
+            'error': str(e)
+        })

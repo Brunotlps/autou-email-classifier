@@ -1,105 +1,102 @@
-"""
-    Serializers para as classes de classificação de email. / Serializers for email classification classes.
-    Conversão entre instâncias de modelos e representações JSON. / Conversion between model instances and JSON representations.
-"""
+"""Serializers para o app de classificação - CORRIGIDO"""
 
 from rest_framework import serializers
 from .models import Classification
 from apps.emails.models import Email
+from drf_spectacular.utils import extend_schema_field
 
 
 class ClassificationSerializer(serializers.ModelSerializer):
-
-
-    # Campos calculados / Computed fields
-    confidence_percentage = serializers.ReadOnlyField()
-    processing_duration_display = serializers.ReadOnlyField()
-    is_completed = serializers.ReadOnlyField()
-    is_pending = serializers.ReadOnlyField()
-
-
-    email_content_preview = serializers.CharField(
-        source='email.content_preview',
-        read_only=True
-    )
-
-
-    email_file_type = serializers.CharField(
-        source='email.file_type',
-        read_only=True
-    )
-
+    """Serializer completo para Classification - com type hints"""
+    
+    email_subject = serializers.CharField(source='email.subject', read_only=True)
+    email_content_preview = serializers.SerializerMethodField()
+    confidence_percentage = serializers.SerializerMethodField()
+    processing_duration_display = serializers.SerializerMethodField()
     
     class Meta:
-
-
         model = Classification
         fields = [
-            'id',
-            'email',
-            'email_content_preview',     
-            'email_file_type',           
-            'classification_result',
-            'confidence_score',
-            'confidence_percentage',
-            'suggested_response',
-            'processing_status',
-            'processing_duration_display',
-            'is_completed',
-            'is_pending',
-            'ai_model_used',
-            'created_at',
-            'classified_at'
+            'id', 'email', 'email_subject', 'email_content_preview',
+            'classification_result', 'confidence_score', 'confidence_percentage',
+            'suggested_response', 'ai_model_used', 'processing_status',
+            'created_at', 'classified_at', 'processing_time_seconds',
+            'processing_duration_display', 'error_message'
         ]
-        read_only_fields = [
-            'id',
-            'created_at',
-            'classified_at',
-            'classification_result',
-            'confidence_score',
-            'suggested_response',
-            'ai_model_used'
-        ]
+        read_only_fields = ['id', 'created_at', 'classified_at']
+    
+    @extend_schema_field(serializers.CharField)
+    def get_email_content_preview(self, obj) -> str:
+        """Preview do conteúdo do email"""
+        if obj.email and obj.email.content:
+            content = obj.email.content
+            return content[:100] + "..." if len(content) > 100 else content
+        return "Sem conteúdo"
+    
+    @extend_schema_field(serializers.CharField)
+    def get_confidence_percentage(self, obj) -> str:
+        """Confiança em porcentagem"""
+        return obj.confidence_percentage if hasattr(obj, 'confidence_percentage') else "0.0%"
+    
+    @extend_schema_field(serializers.CharField)
+    def get_processing_duration_display(self, obj) -> str:
+        """Duração do processamento formatada"""
+        return obj.processing_duration_display if hasattr(obj, 'processing_duration_display') else "N/A"
 
 
 class EmailClassificationSerializer(serializers.Serializer):
-    """
-    Serializer para classificação de emails via API. / Serializer for email classification via API.
-    Usado nos endpoints /classify/ e /classify_async/ Used in the /classify/ and /classify_async/ endpoints.
-    """
+    """Serializer para requests de classificação de email"""
     
     subject = serializers.CharField(
         max_length=255,
         required=False,
         allow_blank=True,
+        default="",
         help_text="Assunto do email"
     )
     
     content = serializers.CharField(
-        max_length=10000,
         required=True,
         allow_blank=False,
-        help_text="Conteúdo do email para classificação"
+        style={'base_template': 'textarea.html', 'rows': 10},
+        help_text="Conteúdo completo do email"
     )
     
     def validate_content(self, value):
-        """Validação customizada do conteúdo."""
-        if len(value.strip()) < 10:
-            raise serializers.ValidationError(
-                "Conteúdo deve ter pelo menos 10 caracteres"
-            )
+        """Validação do conteúdo"""
+        if not value or not value.strip():
+            raise serializers.ValidationError("Conteúdo é obrigatório.")
+        return value.strip()
+
+
+class EmailUploadSerializer(serializers.Serializer):
+    """Serializer para upload de emails via formulário"""
+    
+    subject = serializers.CharField(
+        max_length=255,
+        required=False,
+        default="Email sem assunto"
+    )
+    content = serializers.CharField(
+        style={'base_template': 'textarea.html', 'rows': 10}
+    )
+    
+    def validate_content(self, value):
+        """Validação do conteúdo"""
+        if not value.strip():
+            raise serializers.ValidationError("Conteúdo é obrigatório.")
         return value.strip()
     
-    def validate(self, data):
-        """Validação geral dos dados."""
-        subject = data.get('subject', '').strip()
-        content = data.get('content', '').strip()
-        
-        # Verificar se há conteúdo suficiente para análise / Check for sufficient content for analysis
-        total_text = f"{subject} {content}".strip()
-        if len(total_text) < 15:
-            raise serializers.ValidationError(
-                "Conteúdo total (assunto + texto) muito curto para análise"
-            )
-        
-        return data
+    def create(self, validated_data):
+        """Criar email a partir dos dados validados"""
+        return Email.objects.create(**validated_data)
+
+
+class ClassificationResultSerializer(serializers.Serializer):
+    """Serializer para resultados de classificação"""
+    
+    email_id = serializers.IntegerField()
+    classification = serializers.CharField(max_length=50)
+    confidence = serializers.FloatField(min_value=0.0, max_value=1.0)
+    processing_time = serializers.CharField(required=False)
+    model_version = serializers.CharField(required=False)
