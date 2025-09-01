@@ -156,3 +156,8 @@ Desktop.ini
 # Temporary files
 *.tmp
 *.temp
+# Environment backup files
+.env.backup
+.env.*
+*.env.backup
+**/env.*
