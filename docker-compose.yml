@@ -1,72 +1,16 @@
 version: '3.8'
 
 services:
-  # Django Web Application
   web:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    container_name: autou-app
-    env_file:
-      - .env
-    environment:
-      - DJANGO_SETTINGS_MODULE=core.settings.docker
+    build: .
     ports:
       - "8000:8000"
     volumes:
       - .:/app
       - static_volume:/app/staticfiles
-      - media_volume:/app/media
-    depends_on:
-      - db
-      - redis
-    restart: unless-stopped
-    command: >
-      sh -c "python manage.py collectstatic --noinput &&
-             python manage.py migrate &&
-             python manage.py runserver 0.0.0.0:8000"
-    networks:
-      - autou-network
-
-  # PostgreSQL Database
-  db:
-    image: postgres:13-alpine
-    container_name: autou-db
     environment:
-      POSTGRES_DB: ${POSTGRES_DB:-autou_db}
-      POSTGRES_USER: ${POSTGRES_USER:-autou_user}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-autou_pass}
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-    ports:
-      - "5432:5432"
-    networks:
-      - autou-network
+      - DJANGO_SETTINGS_MODULE=core.settings.docker
     restart: unless-stopped
-
-  # Redis for Cache
-  redis:
-    image: redis:7-alpine
-    container_name: autou-redis
-    ports:
-      - "6379:6379"
-    volumes:
-      - redis_data:/data
-    networks:
-      - autou-network
-    restart: unless-stopped
-    command: redis-server --appendonly yes
 
 volumes:
-  postgres_data:
-    driver: local
-  redis_data:
-    driver: local
   static_volume:
-    driver: local
-  media_volume:
-    driver: local
-
-networks:
-  autou-network:
-    driver: bridge
