@@ -24,13 +24,10 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY . .
 
 # Criar diretórios necessários
-RUN mkdir -p staticfiles media logs
-
-# ⚠️ REMOVER collectstatic do Dockerfile - será feito no build command
-# RUN python manage.py collectstatic --noinput --settings=core.settings.render
+RUN mkdir -p staticfiles media logs static templates
 
 # Expor porta
 EXPOSE 8000
 
-# Comando padrão (Render sobrescreve isso)
-CMD ["gunicorn", "core.wsgi:application", "--host", "0.0.0.0", "--port", "8000"]
+# Comando padrão (Render vai sobrescrever)
+CMD ["gunicorn", "core.wsgi:application", "--bind", "0.0.0.0:8000"]
