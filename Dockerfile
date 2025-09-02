@@ -1,32 +1,34 @@
 FROM python:3.11-slim
 
-# Instalar dependências do sistema necessárias
+# Instalar dependências do sistema
 RUN apt-get update && apt-get install -y \
     gcc \
     g++ \
+    libpq-dev \
     curl \
     && rm -rf /var/lib/apt/lists/*
 
 # Definir diretório de trabalho
 WORKDIR /app
 
-# Copiar requirements primeiro (para cache do Docker)
+# Copiar e instalar dependências
 COPY requirements.txt .
-
-# Instalar dependências Python
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copiar todo o projeto
+# Instalar dj-database-url para Render
+RUN pip install dj-database-url psycopg2-binary
+
+# Copiar código da aplicação
 COPY . .
 
 # Criar diretórios necessários
-RUN mkdir -p staticfiles logs media
+RUN mkdir -p staticfiles media logs
 
 # Coletar arquivos estáticos
-RUN python manage.py collectstatic --noinput --settings=core.settings.docker
+RUN python manage.py collectstatic --noinput --settings=core.settings.render
 
-# Expor porta
-EXPOSE 8000
+# Expor porta (Render usa PORT environment variable)
+EXPOSE $PORT
 
-# Comando para iniciar a aplicação
-CMD ["python", "manage.py", "runserver", "0.0.0.0:8000", "--settings=core.settings.docker"]
+# Comando para iniciar aplicação
+CMD gunicorn core.wsgi:application --host 0.0.0.0 --port $PORT --workers 3
