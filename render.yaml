@@ -1,0 +1,30 @@
+services:
+  - type: web
+    name: autou-email-classifier
+    env: docker
+    region: oregon
+    plan: free
+    branch: main
+    dockerfilePath: ./Dockerfile
+    buildCommand: |
+      pip install -r requirements.txt &&
+      python manage.py makemigrations &&
+      python manage.py migrate &&
+      python manage.py collectstatic --noinput --settings=core.settings.render
+    startCommand: gunicorn core.wsgi:application --bind 0.0.0.0:$PORT --workers 2
+    envVars:
+      - key: DJANGO_SETTINGS_MODULE
+        value: core.settings.render
+      - key: SECRET_KEY
+        generateValue: true
+      - key: DATABASE_URL
+        fromDatabase:
+          name: autou-email-classifier-db
+          property: connectionString
+
+databases:
+  - name: autou-email-classifier-db
+    databaseName: autou_email_classifier
+    user: autou_user
+    region: oregon
+    plan: free

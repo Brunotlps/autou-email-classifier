@@ -1,5 +1,5 @@
 """
-Render.com specific settings for AutoU Email Classifier
+Render.com specific settings - CORRIGIDO PARA STATIC FILES
 """
 
 import os
@@ -70,7 +70,7 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'core.wsgi.application'
 
-# Database - SQLite para build, PostgreSQL para runtime
+# Database - PostgreSQL para produção
 DATABASES = {
     'default': dj_database_url.config(
         default='sqlite:///db.sqlite3',
@@ -93,18 +93,21 @@ TIME_ZONE = 'America/Sao_Paulo'
 USE_I18N = True
 USE_TZ = True
 
-# Static files (CSS, JavaScript, Images)
+# ⚡ STATIC FILES - CONFIGURAÇÃO CORRIGIDA
 STATIC_URL = '/static/'
 STATIC_ROOT = BASE_DIR / 'staticfiles'
 
-# Garantir que o diretório static existe ou usar lista vazia
+# Garantir que diretórios existem
 STATICFILES_DIRS = []
-static_dir = BASE_DIR / 'static'
-if static_dir.exists():
-    STATICFILES_DIRS = [static_dir]
+if (BASE_DIR / 'static').exists():
+    STATICFILES_DIRS.append(BASE_DIR / 'static')
 
-# Use WhiteNoise for static files
-STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
+# WhiteNoise para servir arquivos estáticos
+STATICFILES_STORAGE = 'whitenoise.storage.CompressedStaticFilesStorage'
+
+# Configurações WhiteNoise
+WHITENOISE_USE_FINDERS = True
+WHITENOISE_AUTOREFRESH = True
 
 # Media files
 MEDIA_URL = '/media/'
@@ -134,16 +137,10 @@ SPECTACULAR_SETTINGS = {
     'SERVE_INCLUDE_SCHEMA': False,
 }
 
-# Security settings for production
+# Security settings desabilitados temporariamente para debug
 SECURE_BROWSER_XSS_FILTER = True
 SECURE_CONTENT_TYPE_NOSNIFF = True
 X_FRAME_OPTIONS = 'DENY'
-
-# SSL settings (Render provides HTTPS automatically)
-SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
-SECURE_SSL_REDIRECT = True
-SESSION_COOKIE_SECURE = True
-CSRF_COOKIE_SECURE = True
 
 # Logging
 LOGGING = {
@@ -162,6 +159,10 @@ LOGGING = {
         'apps': {
             'handlers': ['console'],
             'level': 'INFO',
+        },
+        'whitenoise': {
+            'handlers': ['console'],
+            'level': 'DEBUG',
         },
     },
     'root': {
