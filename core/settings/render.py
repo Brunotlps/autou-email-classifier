@@ -4,7 +4,7 @@ Render.com specific settings for AutoU Email Classifier
 
 import os
 import dj_database_url
-from .base import *
+from pathlib import Path
 
 # Build paths
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
@@ -13,7 +13,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent.parent
 DEBUG = False
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = os.environ.get('SECRET_KEY')
+SECRET_KEY = os.environ.get('SECRET_KEY', 'django-insecure-temporary-key-for-build')
 
 # Render.com URL
 RENDER_EXTERNAL_HOSTNAME = os.environ.get('RENDER_EXTERNAL_HOSTNAME')
@@ -22,7 +22,7 @@ if RENDER_EXTERNAL_HOSTNAME:
 else:
     ALLOWED_HOSTS = ['*']
 
-# Application definition (same as base)
+# Application definition
 INSTALLED_APPS = [
     'django.contrib.admin',
     'django.contrib.auth',
@@ -34,7 +34,7 @@ INSTALLED_APPS = [
     'drf_spectacular',
     'corsheaders',
     'apps.emails',
-    'apps.classifier',
+    'apps.classifier', 
     'apps.frontend',
 ]
 
@@ -70,7 +70,7 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'core.wsgi.application'
 
-# Database
+# Database - SQLite para build, PostgreSQL para runtime
 DATABASES = {
     'default': dj_database_url.config(
         default='sqlite:///db.sqlite3',
@@ -96,9 +96,12 @@ USE_TZ = True
 # Static files (CSS, JavaScript, Images)
 STATIC_URL = '/static/'
 STATIC_ROOT = BASE_DIR / 'staticfiles'
-STATICFILES_DIRS = [
-    BASE_DIR / 'static',
-] if (BASE_DIR / 'static').exists() else []
+
+# Garantir que o diretório static existe ou usar lista vazia
+STATICFILES_DIRS = []
+static_dir = BASE_DIR / 'static'
+if static_dir.exists():
+    STATICFILES_DIRS = [static_dir]
 
 # Use WhiteNoise for static files
 STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'

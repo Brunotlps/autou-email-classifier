@@ -1,5 +1,9 @@
 FROM python:3.11-slim
 
+# Variáveis de ambiente
+ENV PYTHONDONTWRITEBYTECODE=1
+ENV PYTHONUNBUFFERED=1
+
 # Instalar dependências do sistema
 RUN apt-get update && apt-get install -y \
     gcc \
@@ -13,10 +17,8 @@ WORKDIR /app
 
 # Copiar e instalar dependências
 COPY requirements.txt .
+RUN pip install --no-cache-dir --upgrade pip
 RUN pip install --no-cache-dir -r requirements.txt
-
-# Instalar dj-database-url para Render
-RUN pip install dj-database-url psycopg2-binary
 
 # Copiar código da aplicação
 COPY . .
@@ -24,11 +26,11 @@ COPY . .
 # Criar diretórios necessários
 RUN mkdir -p staticfiles media logs
 
-# Coletar arquivos estáticos
-RUN python manage.py collectstatic --noinput --settings=core.settings.render
+# ⚠️ REMOVER collectstatic do Dockerfile - será feito no build command
+# RUN python manage.py collectstatic --noinput --settings=core.settings.render
 
-# Expor porta (Render usa PORT environment variable)
-EXPOSE $PORT
+# Expor porta
+EXPOSE 8000
 
-# Comando para iniciar aplicação
-CMD gunicorn core.wsgi:application --host 0.0.0.0 --port $PORT --workers 3
+# Comando padrão (Render sobrescreve isso)
+CMD ["gunicorn", "core.wsgi:application", "--host", "0.0.0.0", "--port", "8000"]

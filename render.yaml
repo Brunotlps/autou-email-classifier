@@ -6,6 +6,10 @@ services:
     plan: free
     branch: main
     dockerfilePath: ./Dockerfile
+    buildCommand: |
+      pip install -r requirements.txt &&
+      python manage.py collectstatic --noinput --settings=core.settings.render
+    startCommand: gunicorn core.wsgi:application --host 0.0.0.0 --port $PORT --workers 2
     envVars:
       - key: DJANGO_SETTINGS_MODULE
         value: core.settings.render
@@ -15,8 +19,6 @@ services:
         fromDatabase:
           name: autou-email-classifier-db
           property: connectionString
-    buildCommand: python manage.py collectstatic --noinput
-    startCommand: gunicorn core.wsgi:application --host 0.0.0.0 --port $PORT
 
 databases:
   - name: autou-email-classifier-db
